@@ -19,7 +19,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         this.title = this.add
             .text(512, 200, "Emails Please", {
                 fontFamily: "Sekuya",
-                fontSize: 78,
+                fontSize: 100, 
                 color: "#ffffff",
                 stroke: "#000000",
                 strokeThickness: 8,
