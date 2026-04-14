@@ -18,9 +18,9 @@ export class GameOver extends Scene {
         this.background.setAlpha(0.5);
 
         this.gameOverText = this.add
-            .text(512, 384, "Game Over", {
-                fontFamily: "Arial Black",
-                fontSize: 64,
+            .text(512, 200, "Game Over", {
+                fontFamily: "Sekuya",
+                fontSize: 100,
                 color: "#ffffff",
                 stroke: "#000000",
                 strokeThickness: 8,
@@ -28,6 +28,34 @@ export class GameOver extends Scene {
             })
             .setOrigin(0.5)
             .setDepth(100);
+        
+        this.gameOverText = this.add
+            .text(512, 420, "Back to Main Menu ", {
+                fontFamily: "Sekuya",
+                fontSize: 38,
+                color: "#ffffff",
+                stroke: "#000000",
+                strokeThickness: 8,
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerdown", () => this.scene.start("MainMenu"));
+
+        this.gameOverText = this.add
+            .text(512, 500, "Restart Level", {
+                fontFamily: "Sekuya",
+                fontSize: 38,
+                color: "#ffffff",
+                stroke: "#000000",
+                strokeThickness: 8,
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerdown", () => this.scene.start("Level1"));
 
         EventBus.emit("current-scene-ready", this);
     }
