@@ -2,7 +2,7 @@ import { Boot } from "./scenes/boot";
 import { GameOver } from "./scenes/game-over";
 import { Level1 as MainGame } from "./scenes/level1";
 import { MainMenu } from "./scenes/main-menu";
-import { AUTO, Game } from "phaser";
+import { CANVAS, Game } from "phaser";
 import { Preloader } from "./scenes/preloader";
 import { Shop } from "./scenes/shop";
 
@@ -11,12 +11,12 @@ import { Shop } from "./scenes/shop";
 const config: Phaser.Types.Core.GameConfig = {
     title: "My Untitled CISC374 Game",
     version: "0.0.1",
-    type: AUTO,
+    type: CANVAS,
     parent: "game-container",
     backgroundColor: "#ffffff",
     scene: [Boot, Preloader, MainMenu, MainGame, Shop, GameOver],
     scale: {
-        parent: "phaser-game",
+        parent: "game-container",
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1024,
@@ -42,7 +42,9 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const StartGame = (parent: string) => {
-    return new Game({ ...config, parent });
+    const game = new Game({ ...config, parent });
+    (globalThis as { __phaserGame?: Game }).__phaserGame = game;
+    return game;
 };
 
 export default StartGame;

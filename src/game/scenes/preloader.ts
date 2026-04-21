@@ -1,4 +1,13 @@
 import { Scene } from "phaser";
+import backgroundDeskImage from "../objects/Background.png";
+import computerImage from "../objects/Computer.png";
+import computerHoverImage from "../objects/ComputerHover.png";
+import computerNotificationImage from "../objects/ComputerNotification.png";
+import computerNotificationHoverImage from "../objects/ComputerNotificationHover.png";
+import dudeImage from "../objects/Dude.png";
+import filesImage from "../objects/Files.png";
+import filesHoverImage from "../objects/FilesHover.png";
+import textBoxImage from "../objects/TextBox.png";
 
 export class Preloader extends Scene {
     constructor() {
@@ -29,6 +38,26 @@ export class Preloader extends Scene {
         this.load.image("logo", "logo.png");
         this.load.image("star", "star.png");
         this.load.image("phaser-logo", "phaser-logo.png");
+
+        // Imported URLs are already absolute/processed by Vite, so clear setPath.
+        this.load.setPath("");
+
+        // Desk scene assets used in Level1.
+        this.load.image("desk-background", backgroundDeskImage);
+        this.load.image("desk-computer", computerImage);
+        this.load.image("desk-computer-hover", computerHoverImage);
+        this.load.image(
+            "desk-computer-notification",
+            computerNotificationImage,
+        );
+        this.load.image(
+            "desk-computer-notification-hover",
+            computerNotificationHoverImage,
+        );
+        this.load.image("desk-dude", dudeImage);
+        this.load.image("desk-files", filesImage);
+        this.load.image("desk-files-hover", filesHoverImage);
+        this.load.image("desk-textbox", textBoxImage);
     }
 
     create() {

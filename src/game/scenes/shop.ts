@@ -22,6 +22,17 @@ export class Shop extends Scene {
     private moneyText!: Phaser.GameObjects.Text;
     private statusText!: Phaser.GameObjects.Text;
 
+    private brightenColor(color: string, amount: number) {
+        const normalized = color.replace("#", "");
+        const value = Number.parseInt(normalized, 16);
+        const r = Math.min(255, Math.max(0, ((value >> 16) & 0xff) + amount));
+        const g = Math.min(255, Math.max(0, ((value >> 8) & 0xff) + amount));
+        const b = Math.min(255, Math.max(0, (value & 0xff) + amount));
+        return `#${r.toString(16).padStart(2, "0")}${g
+            .toString(16)
+            .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    }
+
     constructor() {
         super("Shop");
     }
@@ -34,12 +45,18 @@ export class Shop extends Scene {
     }
 
     create() {
-        this.cameras.main.setBackgroundColor(0x182217);
+        this.cameras.main.setBackgroundColor(0x3a352b);
+
+        this.add.rectangle(512, 384, 1024, 768, 0x2b2821, 0.25);
+        this.add
+            .rectangle(512, 392, 860, 620, 0xe9e1d2, 0.84)
+            .setStrokeStyle(2, 0x80745e);
 
         this.add
             .text(512, 120, `Shop - End of Day ${this.day}`, {
+                fontFamily: "Pix32",
                 fontSize: "44px",
-                color: "#ffffff",
+                color: "#2a261f",
                 fontStyle: "bold",
             })
             .setOrigin(0.5);
@@ -50,8 +67,9 @@ export class Shop extends Scene {
                 190,
                 `Money: $${this.money} | Points: ${this.totalPoints}`,
                 {
+                    fontFamily: "Pix32",
                     fontSize: "26px",
-                    color: "#a9f2b1",
+                    color: "#2f6434",
                 },
             )
             .setOrigin(0.5);
@@ -62,32 +80,34 @@ export class Shop extends Scene {
                 260,
                 "Food and utilities are required every day.\nPay rent at least once every other day.\nEach item costs $3.",
                 {
+                    fontFamily: "Pix32",
                     fontSize: "24px",
-                    color: "#ffffff",
+                    color: "#433b2f",
                     align: "center",
                     lineSpacing: 8,
                 },
             )
             .setOrigin(0.5);
 
-        this.createButton(300, 380, "Buy Food ($3)", "#245e2b", () => {
+        this.createButton(300, 380, "Buy Food ($3)", "#4c6f52", () => {
             this.buyItem("food");
         });
 
-        this.createButton(512, 380, "Pay Utilities ($3)", "#245e2b", () => {
+        this.createButton(512, 380, "Pay Utilities ($3)", "#4c6f52", () => {
             this.buyItem("utilities");
         });
 
-        this.createButton(724, 380, "Pay Rent ($3)", "#245e2b", () => {
+        this.createButton(724, 380, "Pay Rent ($3)", "#4c6f52", () => {
             this.buyItem("rent");
         });
 
-        this.createButton(512, 520, "Continue", "#2c4a77", () => {
+        this.createButton(512, 470, "Continue", "#4f667f", () => {
             this.leaveShop();
         });
 
         this.statusText = this.add
             .text(512, 620, "", {
+                fontFamily: "Pix32",
                 fontSize: "22px",
                 color: "#9effa0",
                 align: "center",
@@ -107,17 +127,29 @@ export class Shop extends Scene {
     ) {
         const button = this.add
             .text(x, y, label, {
+                fontFamily: "Pix32",
                 fontSize: "22px",
                 color: "#ffffff",
                 backgroundColor,
-                fixedWidth: 190,
+                fixedWidth: 220,
                 align: "center",
-                padding: { left: 8, right: 8, top: 10, bottom: 10 },
+                padding: { left: 8, right: 8, top: 12, bottom: 12 },
             })
             .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({ useHandCursor: true })
+            .setShadow(0, 2, "#000000", 6, true, true);
+
+        const hoverColor = this.brightenColor(backgroundColor, 18);
 
         button.on("pointerdown", onClick);
+        button.on("pointerover", () => {
+            button.setStyle({ backgroundColor: hoverColor });
+            button.setScale(1.02);
+        });
+        button.on("pointerout", () => {
+            button.setStyle({ backgroundColor });
+            button.setScale(1);
+        });
     }
 
     private buyItem(item: ShopItem) {
