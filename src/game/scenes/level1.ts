@@ -971,12 +971,10 @@ export class Level1 extends Scene {
             this.interruptTick = null;
         }
         this.interruptActive = false;
-        if (this.dudeSprite) {
-            this.dudeSprite.setVisible(false);
-            this.interruptBarBg.setVisible(false);
-            this.interruptBarFill.setVisible(false);
-            this.interruptText.setVisible(false);
-        }
+        this.dudeSprite.setVisible(false);
+        this.interruptBarBg.setVisible(false);
+        this.interruptBarFill.setVisible(false);
+        this.interruptText.setVisible(false);
     }
 
     private scheduleNextEmailArrival() {
@@ -1247,7 +1245,7 @@ export class Level1 extends Scene {
             this.selectedPart,
         );
 
-        if (selectedMatchesRule && selectedIsSuspicious) {
+        if (selectedIsSuspicious) {
             this.inspectText
                 .setColor("#b00020")
                 .setText(
