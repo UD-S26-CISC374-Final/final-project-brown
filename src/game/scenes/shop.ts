@@ -1,12 +1,15 @@
 import { Scene } from "phaser";
+import { MAX_DAYS } from "../email-content";
 
-type ShopItem = "food" | "utilities" | "rent";
+type ShopItem = "food" | "utilities" | "rent" | "hint" | "shield" | "reveal";
 
 interface ShopSceneData {
     day?: number;
     totalPoints?: number;
     money?: number;
     daysWithoutRent?: number;
+    hintCount?: number;
+    revealCount?: number;
 }
 
 export class Shop extends Scene {
@@ -14,10 +17,13 @@ export class Shop extends Scene {
     private totalPoints = 0;
     private money = 0;
     private daysWithoutRent = 0;
+    private hintCount = 0;
+    private revealCount = 0;
 
     private foodPaid = false;
     private utilitiesPaid = false;
     private rentPaid = false;
+    private shieldPurchased = false;
 
     private moneyText!: Phaser.GameObjects.Text;
     private statusText!: Phaser.GameObjects.Text;
@@ -42,21 +48,26 @@ export class Shop extends Scene {
         this.totalPoints = data.totalPoints ?? 0;
         this.money = data.money ?? 0;
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
+        this.hintCount = data.hintCount ?? 0;
+        this.revealCount = data.revealCount ?? 0;
     }
 
     create() {
-        this.cameras.main.setBackgroundColor(0x3a352b);
+        this.cameras.main.setBackgroundColor(0x74736d);
 
-        this.add.rectangle(512, 384, 1024, 768, 0x2b2821, 0.25);
+        this.add.rectangle(512, 384, 1024, 768, 0x74736d, 1);
         this.add
-            .rectangle(512, 392, 860, 620, 0xe9e1d2, 0.84)
-            .setStrokeStyle(2, 0x80745e);
+            .rectangle(512, 392, 700, 590, 0xefe4c7, 0.97)
+            .setStrokeStyle(4, 0x5d5747);
+        this.add
+            .rectangle(512, 148, 700, 74, 0x2f3f34, 1)
+            .setStrokeStyle(2, 0xb5a36a);
 
         this.add
-            .text(512, 120, `Shop - End of Day ${this.day}`, {
+            .text(512, 148, `Supply Window - Day ${this.day}`, {
                 fontFamily: "Pix32",
-                fontSize: "44px",
-                color: "#2a261f",
+                fontSize: "40px",
+                color: "#f4ecd8",
                 fontStyle: "bold",
             })
             .setOrigin(0.5);
@@ -64,12 +75,13 @@ export class Shop extends Scene {
         this.moneyText = this.add
             .text(
                 512,
-                190,
+                224,
                 `Money: $${this.money} | Points: ${this.totalPoints}`,
                 {
                     fontFamily: "Pix32",
                     fontSize: "26px",
-                    color: "#2f6434",
+                    color: "#2f4b36",
+                    backgroundColor: "#ece1c4",
                 },
             )
             .setOrigin(0.5);
@@ -77,45 +89,76 @@ export class Shop extends Scene {
         this.add
             .text(
                 512,
-                260,
-                "Food and utilities are required every day.\nPay rent at least once every other day.\nEach item costs $3.",
+                296,
+                "Food and utilities are required every day.\nPay rent at least once every other day.\nEssentials cost $3.",
                 {
                     fontFamily: "Pix32",
-                    fontSize: "24px",
-                    color: "#433b2f",
+                    fontSize: "22px",
+                    color: "#433927",
                     align: "center",
                     lineSpacing: 8,
                 },
             )
             .setOrigin(0.5);
 
-        this.createButton(300, 380, "Buy Food ($3)", "#4c6f52", () => {
+        this.add
+            .text(
+                512,
+                352,
+                "Powerups: hint $5, shield $10, eliminate $15. Shield expires after one shift.",
+                {
+                    fontFamily: "Pix32",
+                    fontSize: "16px",
+                    color: "#5a4a32",
+                    align: "center",
+                },
+            )
+            .setOrigin(0.5);
+
+        this.createButton(300, 410, "Buy Food ($3)", "#44624c", () => {
             this.buyItem("food");
         });
 
-        this.createButton(512, 380, "Pay Utilities ($3)", "#4c6f52", () => {
+        this.createButton(512, 410, "Pay Utilities ($3)", "#44624c", () => {
             this.buyItem("utilities");
         });
 
-        this.createButton(724, 380, "Pay Rent ($3)", "#4c6f52", () => {
+        this.createButton(724, 410, "Pay Rent ($3)", "#44624c", () => {
             this.buyItem("rent");
         });
 
-        this.createButton(512, 470, "Continue", "#4f667f", () => {
+        this.createButton(300, 490, "Hint ($5)", "#66563b", () => {
+            this.buyItem("hint");
+        });
+
+        this.createButton(512, 490, "Shield ($10)", "#66563b", () => {
+            this.buyItem("shield");
+        });
+
+        this.createButton(724, 490, "Eliminate ($15)", "#66563b", () => {
+            this.buyItem("reveal");
+        });
+
+        this.createButton(512, 560, "Continue", "#4d5f55", () => {
             this.leaveShop();
         });
 
+        this.add
+            .rectangle(512, 666, 650, 160, 0xf5edd7, 0.97)
+            .setStrokeStyle(2, 0x8a784d);
+
         this.statusText = this.add
-            .text(512, 620, "", {
+            .text(512, 666, "", {
                 fontFamily: "Pix32",
-                fontSize: "22px",
-                color: "#9effa0",
+                fontSize: "16px",
+                color: "#2f4b36",
                 align: "center",
-                lineSpacing: 6,
+                lineSpacing: 4,
+                wordWrap: { width: 610 },
             })
             .setOrigin(0.5);
 
-        this.updateStatus("Make your purchases.", "#9effa0");
+        this.updateStatus("Make your purchases.", "#2f4b36");
     }
 
     private createButton(
@@ -129,7 +172,9 @@ export class Shop extends Scene {
             .text(x, y, label, {
                 fontFamily: "Pix32",
                 fontSize: "22px",
-                color: "#ffffff",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
                 backgroundColor,
                 fixedWidth: 220,
                 align: "center",
@@ -153,40 +198,64 @@ export class Shop extends Scene {
     }
 
     private buyItem(item: ShopItem) {
-        if (this.money < 3) {
-            this.updateStatus("Not enough money for that purchase.", "#ff9f9f");
+        const costs: Record<ShopItem, number> = {
+            food: 3,
+            utilities: 3,
+            rent: 3,
+            hint: 5,
+            shield: 10,
+            reveal: 15,
+        };
+        const cost = costs[item];
+
+        if (this.money < cost) {
+            this.updateStatus("Not enough money for that purchase.", "#7a2d25");
             return;
         }
 
         if (item === "food" && this.foodPaid) {
-            this.updateStatus("Food already purchased.", "#ffd27f");
+            this.updateStatus("Food already purchased.", "#7b641f");
             return;
         }
 
         if (item === "utilities" && this.utilitiesPaid) {
-            this.updateStatus("Utilities already paid.", "#ffd27f");
+            this.updateStatus("Utilities already paid.", "#7b641f");
             return;
         }
 
         if (item === "rent" && this.rentPaid) {
-            this.updateStatus("Rent already paid today.", "#ffd27f");
+            this.updateStatus("Rent already paid today.", "#7b641f");
             return;
         }
 
-        this.money -= 3;
+        if (item === "shield" && this.shieldPurchased) {
+            this.updateStatus(
+                "Shield already armed for next shift.",
+                "#7b641f",
+            );
+            return;
+        }
+
+        this.money -= cost;
 
         if (item === "food") {
             this.foodPaid = true;
         } else if (item === "utilities") {
             this.utilitiesPaid = true;
-        } else {
+        } else if (item === "rent") {
             this.rentPaid = true;
+        } else if (item === "hint") {
+            this.hintCount += 1;
+        } else if (item === "shield") {
+            this.shieldPurchased = true;
+        } else {
+            this.revealCount += 1;
         }
 
         this.moneyText.setText(
             `Money: $${this.money} | Points: ${this.totalPoints}`,
         );
-        this.updateStatus(`Purchased: ${item}.`, "#9effa0");
+        this.updateStatus(`Purchased: ${item}.`, "#2f4b36");
     }
 
     private leaveShop() {
@@ -196,6 +265,8 @@ export class Shop extends Scene {
                 totalPoints: this.totalPoints,
                 money: this.money,
                 daysWithoutRent: this.daysWithoutRent,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Your family was not fed or utilities were shut off.",
@@ -212,6 +283,8 @@ export class Shop extends Scene {
                 totalPoints: this.totalPoints,
                 money: this.money,
                 daysWithoutRent: updatedDaysWithoutRent,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Rent went unpaid too long. You must pay rent at least once every other day.",
@@ -219,12 +292,14 @@ export class Shop extends Scene {
             return;
         }
 
-        if (this.day >= 3) {
+        if (this.day >= MAX_DAYS) {
             this.scene.start("Level1", {
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
                 daysWithoutRent: updatedDaysWithoutRent,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
                 shopOutcome: "win",
                 outcomeMessage: `Final points: ${this.totalPoints}\nFinal money: $${this.money}`,
             });
@@ -236,6 +311,9 @@ export class Shop extends Scene {
             totalPoints: this.totalPoints,
             money: this.money,
             daysWithoutRent: updatedDaysWithoutRent,
+            hintCount: this.hintCount,
+            revealCount: this.revealCount,
+            shieldActive: this.shieldPurchased,
             shopOutcome: "continue",
         });
     }
@@ -248,7 +326,9 @@ export class Shop extends Scene {
                     `Food: ${this.foodPaid ? "PAID" : "NOT PAID"}\n` +
                     `Utilities: ${this.utilitiesPaid ? "PAID" : "NOT PAID"}\n` +
                     `Rent: ${this.rentPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Days since last rent payment: ${this.daysWithoutRent}`,
+                    `Hint ${this.hintCount}  |  Eliminate ${this.revealCount}  |  Shield ${
+                        this.shieldPurchased ? "ARMED" : "NONE"
+                    }`,
             );
     }
 }

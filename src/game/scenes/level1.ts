@@ -1,104 +1,35 @@
 import { Scene } from "phaser";
-
-type EmailType = "valid" | "phishing" | "spam";
-type InspectPart = "domain" | "subject" | "content";
-type RuleId = 1 | 2 | 3;
+import {
+    DAYS,
+    type DayPlan,
+    type EmailCase,
+    type EmailType,
+    getRulebookPages,
+    MAX_DAYS,
+} from "../email-content";
 
 interface LevelSceneData {
     day?: number;
     totalPoints?: number;
     money?: number;
     daysWithoutRent?: number;
+    hintCount?: number;
+    revealCount?: number;
+    shieldActive?: boolean;
     shopOutcome?: "continue" | "dead" | "win";
     outcomeMessage?: string;
 }
 
-interface EmailCase {
-    from: string;
-    domain: string;
-    subject: string;
+interface RulebookPage {
+    title: string;
     body: string;
-    type: EmailType;
-    suspiciousParts: InspectPart[];
+    companyIndex?: number;
 }
 
 export class Level1 extends Scene {
-    private readonly dayEmailCounts = [3, 4, 5];
-    private readonly dayDurationTargetsMs = [60000, 75000, 90000];
-
-    private readonly emailPool: EmailCase[] = [
-        {
-            from: "Registrar Office",
-            domain: "campus.edu",
-            subject: "Course registration opens Monday",
-            body: "Registration for summer classes opens Monday at 8:00 AM. Use the official student portal.",
-            type: "valid",
-            suspiciousParts: [],
-        },
-        {
-            from: "Payroll Desk",
-            domain: "company.com",
-            subject: "Timesheet approved for this week",
-            body: "Your manager approved your hours. Payment will post on Friday.",
-            type: "valid",
-            suspiciousParts: [],
-        },
-        {
-            from: "City Clinic",
-            domain: "cityhealth.org",
-            subject: "Appointment reminder",
-            body: "Your appointment is tomorrow at 10:30 AM. Bring your ID and insurance card.",
-            type: "valid",
-            suspiciousParts: [],
-        },
-        {
-            from: "Security Team",
-            domain: "compaany-support.com",
-            subject: "Urgent: verify password now",
-            body: "We detected unusual login activity. Enter your password and SSN in this form or your account will be locked.",
-            type: "phishing",
-            suspiciousParts: ["domain"],
-        },
-        {
-            from: "Benefits Update",
-            domain: "campus-payroll.net",
-            subject: "Action required to keep benefits",
-            body: "Click this external link and confirm your bank details immediately to avoid cancellation.",
-            type: "phishing",
-            suspiciousParts: ["domain"],
-        },
-        {
-            from: "Cloud Admin",
-            domain: "secure-company.co",
-            subject: "Mailbox almost full",
-            body: "Download the attachment and sign in with your full credentials to prevent email deletion.",
-            type: "phishing",
-            suspiciousParts: ["content"],
-        },
-        {
-            from: "Mega Deals Blast",
-            domain: "zzpromo-lucky.biz",
-            subject: "BUY NOW BUY NOW limited wow",
-            body: "vouchers rocket pizza crypto socks random random random click click click",
-            type: "spam",
-            suspiciousParts: ["subject", "content"],
-        },
-        {
-            from: "Ultra Offers",
-            domain: "hotrandommail.xyz",
-            subject: "1000% FREE winner combo",
-            body: "banana cash moon shoes! get 19 gifts if you forward this to 20 friends today",
-            type: "spam",
-            suspiciousParts: ["subject", "content"],
-        },
-        {
-            from: "Noise Mailer",
-            domain: "bulk-bargain-mail.info",
-            subject: "Crazy coins tea lamp deal",
-            body: "coupon storm dragon chair reward reward reward weird text no context",
-            type: "spam",
-            suspiciousParts: ["subject", "content"],
-        },
+    private readonly dayDurationTargetsMs = [
+        60000, 70000, 80000, 90000, 100000, 110000, 120000, 130000, 140000,
+        150000,
     ];
 
     private day = 1;
@@ -108,6 +39,9 @@ export class Level1 extends Scene {
     private emailsProcessed = 0;
     private totalEmailsForDay = 0;
     private daysWithoutRent = 0;
+    private hintCount = 0;
+    private revealCount = 0;
+    private shieldActive = false;
 
     private incomingShopOutcome: LevelSceneData["shopOutcome"];
     private incomingOutcomeMessage = "";
@@ -117,7 +51,7 @@ export class Level1 extends Scene {
     private selectedInboxIndex = -1;
     private arrivalTimers: Phaser.Time.TimerEvent[] = [];
     private dayEmailIntervalMs = 0;
-    private interruptTimer: Phaser.Time.TimerEvent | null = null;
+    private interruptRollTimer: Phaser.Time.TimerEvent | null = null;
     private interruptActive = false;
     private interruptProgress = 0;
     private interruptTick: Phaser.Time.TimerEvent | null = null;
@@ -129,23 +63,29 @@ export class Level1 extends Scene {
     private computerHovered = false;
     private filesHovered = false;
 
-    private searchMode = false;
-    private selectedRule: RuleId | null = null;
-    private selectedPart: InspectPart | null = null;
-    private inspectButtonHovered = false;
+    private rulebookPages: RulebookPage[] = [];
+    private rulebookPageIndex = 0;
 
     private deskBackgroundImage!: Phaser.GameObjects.Image;
     private computerObject!: Phaser.GameObjects.Image;
     private filesObject!: Phaser.GameObjects.Image;
     private computerZone!: Phaser.GameObjects.Zone;
     private filesZone!: Phaser.GameObjects.Zone;
+    private computerPanelChrome: Phaser.GameObjects.Rectangle[] = [];
+    private filesPanelChrome: Phaser.GameObjects.Rectangle[] = [];
 
     private headerText!: Phaser.GameObjects.Text;
     private scoreText!: Phaser.GameObjects.Text;
     private moneyText!: Phaser.GameObjects.Text;
     private progressText!: Phaser.GameObjects.Text;
+    private feedbackBar!: Phaser.GameObjects.Rectangle;
     private feedbackText!: Phaser.GameObjects.Text;
+    private readonly classificationFeedbackHoldMs = 3000;
+    private feedbackHoldUntilMs = 0;
+    private deferredFeedbackTimer: Phaser.Time.TimerEvent | null = null;
+    private dayFinishTimer: Phaser.Time.TimerEvent | null = null;
 
+    private endScreenBg!: Phaser.GameObjects.Rectangle;
     private computerPanelBg!: Phaser.GameObjects.Rectangle;
     private filesPanelBg!: Phaser.GameObjects.Rectangle;
 
@@ -155,21 +95,27 @@ export class Level1 extends Scene {
     private subjectText!: Phaser.GameObjects.Text;
     private contentLabelText!: Phaser.GameObjects.Text;
     private contentText!: Phaser.GameObjects.Text;
+    private attachmentText!: Phaser.GameObjects.Text;
     private emailSwitchText!: Phaser.GameObjects.Text;
     private previousEmailButton!: Phaser.GameObjects.Text;
     private nextEmailButton!: Phaser.GameObjects.Text;
+    private powerupStatusText!: Phaser.GameObjects.Text;
+    private hintButton!: Phaser.GameObjects.Text;
+    private revealButton!: Phaser.GameObjects.Text;
 
     private rulebookTitleText!: Phaser.GameObjects.Text;
-    private rulebookHelpText!: Phaser.GameObjects.Text;
-    private rule1Text!: Phaser.GameObjects.Text;
-    private rule2Text!: Phaser.GameObjects.Text;
-    private rule3Text!: Phaser.GameObjects.Text;
-    private inspectText!: Phaser.GameObjects.Text;
+    private rulebookPageText!: Phaser.GameObjects.Text;
+    private rulebookBodyText!: Phaser.GameObjects.Text;
+    private previousRulePageButton!: Phaser.GameObjects.Text;
+    private nextRulePageButton!: Phaser.GameObjects.Text;
+    private rulebookCoreButton!: Phaser.GameObjects.Text;
+    private rulebookRosterButton!: Phaser.GameObjects.Text;
+    private rulebookTodayButton!: Phaser.GameObjects.Text;
+    private companyRuleButtons: Phaser.GameObjects.Text[] = [];
 
     private validButton!: Phaser.GameObjects.Text;
     private phishingButton!: Phaser.GameObjects.Text;
-    private spamButton!: Phaser.GameObjects.Text;
-    private toggleSearchButton!: Phaser.GameObjects.Text;
+    private revealedEmails = new WeakSet<EmailCase>();
 
     private endDayTitle!: Phaser.GameObjects.Text;
     private endDaySummary!: Phaser.GameObjects.Text;
@@ -193,6 +139,9 @@ export class Level1 extends Scene {
         this.totalPoints = data.totalPoints ?? 0;
         this.money = data.money ?? 0;
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
+        this.hintCount = data.hintCount ?? 0;
+        this.revealCount = data.revealCount ?? 0;
+        this.shieldActive = data.shieldActive ?? false;
         this.incomingShopOutcome = data.shopOutcome;
         this.incomingOutcomeMessage = data.outcomeMessage ?? "";
     }
@@ -210,11 +159,561 @@ export class Level1 extends Scene {
         }
 
         if (this.incomingShopOutcome === "win") {
-            this.showEnding("You Survived 3 Days", this.incomingOutcomeMessage);
+            this.showEnding(
+                "You Survived 10 Days",
+                this.incomingOutcomeMessage,
+            );
             return;
         }
 
         this.startDay(this.day);
+    }
+
+    private buildDesk() {
+        if (this.textures.exists("desk-background")) {
+            this.deskBackgroundImage = this.add
+                .image(512, 384, "desk-background")
+                .setDisplaySize(1024, 768)
+                .setDepth(-8);
+        } else {
+            this.deskBackgroundImage = this.add
+                .image(512, 384, "background")
+                .setDisplaySize(1024, 768)
+                .setDepth(-8);
+        }
+
+        const computerBaseKey =
+            this.textures.exists("desk-computer") ? "desk-computer" : "logo";
+        const filesBaseKey =
+            this.textures.exists("desk-files") ? "desk-files" : "logo";
+
+        this.computerObject = this.add
+            .image(512, 384, computerBaseKey)
+            .setDisplaySize(1024, 768)
+            .setDepth(-7);
+
+        this.filesObject = this.add
+            .image(512, 384, filesBaseKey)
+            .setDisplaySize(1024, 768)
+            .setDepth(-6);
+
+        this.computerZone = this.add
+            .zone(760, 406, 430, 520)
+            .setInteractive({ useHandCursor: true });
+
+        this.filesZone = this.add
+            .zone(260, 406, 430, 520)
+            .setInteractive({ useHandCursor: true });
+
+        this.computerZone.on("pointerover", () => {
+            this.computerHovered = true;
+            this.refreshDeskTextures();
+        });
+        this.computerZone.on("pointerout", () => {
+            this.computerHovered = false;
+            this.refreshDeskTextures();
+        });
+        this.computerZone.on("pointerdown", () => {
+            if (!this.triageVisible || this.interruptActive) {
+                return;
+            }
+
+            this.computerPanelOpen = !this.computerPanelOpen;
+            if (this.computerPanelOpen) {
+                this.hasUnreadNotification = false;
+                if (
+                    this.selectedInboxIndex < 0 &&
+                    this.inboxEmails.length > 0
+                ) {
+                    this.selectedInboxIndex = 0;
+                }
+                this.refreshEmailPanel();
+            }
+
+            this.updatePanelVisibility();
+            this.refreshDeskTextures();
+        });
+
+        this.filesZone.on("pointerover", () => {
+            if (!this.triageVisible) {
+                return;
+            }
+
+            this.filesHovered = true;
+            this.refreshDeskTextures();
+        });
+        this.filesZone.on("pointerout", () => {
+            this.filesHovered = false;
+            this.refreshDeskTextures();
+        });
+        this.filesZone.on("pointerdown", () => {
+            if (!this.triageVisible || this.interruptActive) {
+                return;
+            }
+
+            this.filesPanelOpen = !this.filesPanelOpen;
+            this.updatePanelVisibility();
+        });
+
+        this.refreshDeskTextures();
+    }
+
+    private buildUI() {
+        this.add
+            .rectangle(512, 58, 1024, 106, 0x26362c, 0.96)
+            .setStrokeStyle(2, 0xb5a36a)
+            .setDepth(10);
+        this.add.rectangle(512, 116, 1024, 6, 0xb5a36a, 0.9).setDepth(10);
+
+        this.headerText = this.add
+            .text(32, 18, "", {
+                fontSize: "30px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setDepth(11);
+
+        this.scoreText = this.add
+            .text(32, 57, "", {
+                fontSize: "22px",
+                color: "#f4ecd8",
+            })
+            .setStyle({ backgroundColor: "#334339" })
+            .setDepth(11);
+
+        this.moneyText = this.add
+            .text(250, 57, "", {
+                fontSize: "22px",
+                color: "#e2d39e",
+            })
+            .setStyle({ backgroundColor: "transparent" })
+            .setDepth(11);
+
+        this.progressText = this.add
+            .text(460, 59, "", {
+                fontSize: "20px",
+                color: "#e2d39e",
+            })
+            .setStyle({ backgroundColor: "transparent" })
+            .setDepth(11);
+
+        this.feedbackBar = this.add
+            .rectangle(512, 144, 920, 42, 0xefe4c7, 0.95)
+            .setStrokeStyle(2, 0x5d5747)
+            .setDepth(29);
+
+        this.feedbackText = this.add
+            .text(74, 130, "", {
+                fontSize: "20px",
+                color: "#2c271f",
+                wordWrap: { width: 860 },
+            })
+            .setDepth(30);
+
+        this.endScreenBg = this.add
+            .rectangle(512, 384, 1024, 768, 0x30342b, 0.96)
+            .setDepth(18)
+            .setVisible(false);
+
+        this.computerPanelBg = this.add
+            .rectangle(770, 466, 470, 590, 0xefe4c7, 0.97)
+            .setStrokeStyle(3, 0x5d5747)
+            .setDepth(15)
+            .setVisible(false);
+
+        this.filesPanelBg = this.add
+            .rectangle(255, 466, 460, 590, 0xefe4c7, 0.97)
+            .setStrokeStyle(3, 0x5d5747)
+            .setDepth(15)
+            .setVisible(false);
+
+        this.computerPanelChrome = [
+            this.add
+                .rectangle(770, 202, 432, 46, 0x26362c, 1)
+                .setStrokeStyle(2, 0xb5a36a)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 364, 432, 2, 0xb5a36a, 0.62)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 492, 432, 178, 0xf8f0dc, 0.7)
+                .setStrokeStyle(1, 0xd0bd84)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 640, 432, 70, 0xe2d39e, 0.32)
+                .setStrokeStyle(1, 0xd0bd84)
+                .setDepth(15)
+                .setVisible(false),
+        ];
+
+        this.filesPanelChrome = [
+            this.add
+                .rectangle(255, 202, 422, 46, 0x26362c, 1)
+                .setStrokeStyle(2, 0xb5a36a)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(255, 266, 422, 2, 0xb5a36a, 0.62)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(255, 526, 422, 330, 0xf8f0dc, 0.72)
+                .setStrokeStyle(1, 0xd0bd84)
+                .setDepth(15)
+                .setVisible(false),
+        ];
+
+        this.emailPanelTitle = this.add
+            .text(560, 189, "Email Monitor", {
+                fontSize: "24px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.emailSwitchText = this.add
+            .text(560, 236, "", {
+                fontSize: "16px",
+                color: "#5b4f3e",
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.previousEmailButton = this.createButton(
+            790,
+            236,
+            "< Prev",
+            "#5f6359",
+            () => {
+                this.showPreviousEmail();
+            },
+            90,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.nextEmailButton = this.createButton(
+            900,
+            236,
+            "Next >",
+            "#5f6359",
+            () => {
+                this.showNextEmail();
+            },
+            90,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.fromText = this.add
+            .text(560, 276, "", {
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 430 },
+                lineSpacing: 4,
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.domainText = this.add
+            .text(560, 312, "", {
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 430 },
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.subjectText = this.add
+            .text(560, 348, "", {
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 430 },
+                lineSpacing: 4,
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.contentLabelText = this.add
+            .text(560, 392, "Content:", {
+                fontSize: "17px",
+                color: "#2a251c",
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.contentText = this.add
+            .text(560, 422, "", {
+                fontSize: "16px",
+                color: "#2a251c",
+                wordWrap: { width: 430 },
+                lineSpacing: 6,
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.attachmentText = this.add
+            .text(560, 594, "", {
+                fontSize: "16px",
+                color: "#2a251c",
+                wordWrap: { width: 430 },
+                lineSpacing: 4,
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.powerupStatusText = this.add
+            .text(560, 632, "", {
+                fontSize: "14px",
+                color: "#5a4a32",
+                wordWrap: { width: 430 },
+                lineSpacing: 4,
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.hintButton = this.createButton(
+            630,
+            672,
+            "Hint",
+            "#66563b",
+            () => {
+                this.useHint();
+            },
+            130,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.revealButton = this.createButton(
+            810,
+            672,
+            "Eliminate",
+            "#66563b",
+            () => {
+                this.useReveal();
+            },
+            150,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.validButton = this.createButton(
+            675,
+            716,
+            "Valid",
+            "#44624c",
+            () => {
+                this.classifySelectedEmail("valid");
+            },
+            150,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.phishingButton = this.createButton(
+            865,
+            716,
+            "Phishing",
+            "#7a3e36",
+            () => {
+                this.classifySelectedEmail("phishing");
+            },
+            150,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.rulebookTitleText = this.add
+            .text(44, 186, "Rulebook", {
+                fontSize: "28px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.rulebookCoreButton = this.createButton(
+            82,
+            244,
+            "Core",
+            "#66563b",
+            () => {
+                this.showRulebookPageByTitle("Core Rules");
+            },
+            78,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.rulebookRosterButton = this.createButton(
+            190,
+            244,
+            "Roster",
+            "#66563b",
+            () => {
+                this.showRulebookPageByTitle("RedForge");
+            },
+            96,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.rulebookTodayButton = this.createButton(
+            312,
+            244,
+            "Today",
+            "#66563b",
+            () => {
+                this.showRulebookPageByTitle(`Day ${this.day} Alerts`);
+            },
+            90,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        const companyLabels = [
+            { button: "Red", page: "RedForge" },
+            { button: "Blue", page: "BluePeak" },
+            { button: "North", page: "Northstar" },
+            { button: "Stone", page: "StoneGate" },
+            { button: "Clear", page: "ClearPath" },
+            { button: "Iron", page: "IronClad" },
+        ];
+        this.companyRuleButtons = companyLabels.map((company, index) =>
+            this.createButton(
+                58 + index * 67,
+                292,
+                company.button,
+                "#4d5f55",
+                () => {
+                    this.showRulebookPageByTitle(company.page);
+                },
+                62,
+            )
+                .setDepth(16)
+                .setVisible(false),
+        );
+
+        this.rulebookPageText = this.add
+            .text(44, 330, "", {
+                fontSize: "20px",
+                color: "#5a4a32",
+                wordWrap: { width: 410 },
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.rulebookBodyText = this.add
+            .text(44, 366, "", {
+                fontSize: "15px",
+                color: "#2a251c",
+                wordWrap: { width: 410 },
+                lineSpacing: 4,
+            })
+            .setDepth(16)
+            .setVisible(false);
+
+        this.previousRulePageButton = this.createButton(
+            145,
+            734,
+            "< Page",
+            "#66563b",
+            () => {
+                this.showPreviousRulePage();
+            },
+            130,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.nextRulePageButton = this.createButton(
+            365,
+            734,
+            "Page >",
+            "#66563b",
+            () => {
+                this.showNextRulePage();
+            },
+            130,
+        )
+            .setDepth(16)
+            .setVisible(false);
+
+        this.endDayTitle = this.add
+            .text(512, 260, "", {
+                fontSize: "42px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setOrigin(0.5)
+            .setDepth(20)
+            .setVisible(false);
+
+        this.endDaySummary = this.add
+            .text(512, 350, "", {
+                fontSize: "26px",
+                color: "#efe4c7",
+                align: "center",
+                wordWrap: { width: 700 },
+                lineSpacing: 8,
+            })
+            .setOrigin(0.5)
+            .setDepth(20)
+            .setVisible(false);
+
+        this.toShopButton = this.createButton(
+            512,
+            460,
+            "Enter Shop",
+            "#44624c",
+            () => {
+                this.enterShop();
+            },
+            240,
+        )
+            .setDepth(20)
+            .setVisible(false);
+
+        this.finalTitle = this.add
+            .text(512, 250, "", {
+                fontSize: "48px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(20)
+            .setVisible(false);
+
+        this.finalSummary = this.add
+            .text(512, 360, "", {
+                fontSize: "28px",
+                color: "#efe4c7",
+                align: "center",
+                wordWrap: { width: 760 },
+                lineSpacing: 8,
+            })
+            .setOrigin(0.5)
+            .setDepth(20)
+            .setVisible(false);
+
+        this.restartButton = this.createButton(
+            512,
+            500,
+            "Restart Game",
+            "#4d5f55",
+            () => {
+                this.scene.restart();
+            },
+            240,
+        )
+            .setDepth(20)
+            .setVisible(false);
     }
 
     private buildInterruptUI() {
@@ -260,509 +759,6 @@ export class Level1 extends Scene {
         });
     }
 
-    private buildDesk() {
-        if (this.textures.exists("desk-background")) {
-            this.deskBackgroundImage = this.add
-                .image(512, 384, "desk-background")
-                .setDisplaySize(1024, 768)
-                .setDepth(-8);
-        } else {
-            this.deskBackgroundImage = this.add
-                .image(512, 384, "background")
-                .setDisplaySize(1024, 768)
-                .setDepth(-8);
-        }
-
-        const computerBaseKey =
-            this.textures.exists("desk-computer") ? "desk-computer" : "logo";
-        const filesBaseKey =
-            this.textures.exists("desk-files") ? "desk-files" : "logo";
-
-        this.computerObject = this.add
-            .image(512, 384, computerBaseKey)
-            .setDisplaySize(1024, 768)
-            .setDepth(-7);
-
-        this.filesObject = this.add
-            .image(512, 384, filesBaseKey)
-            .setDisplaySize(1024, 768)
-            .setDepth(-6);
-
-        this.computerZone = this.add
-            .zone(760, 406, 430, 520)
-            .setInteractive({ useHandCursor: true });
-
-        this.filesZone = this.add
-            .zone(260, 406, 430, 520)
-            .setInteractive({ useHandCursor: true });
-
-        this.computerZone.on("pointerover", () => {
-            this.computerHovered = true;
-            this.refreshComputerTexture();
-        });
-        this.computerZone.on("pointerout", () => {
-            this.computerHovered = false;
-            this.refreshComputerTexture();
-        });
-        this.computerZone.on("pointerdown", () => {
-            if (!this.triageVisible || this.interruptActive) {
-                return;
-            }
-
-            this.computerPanelOpen = !this.computerPanelOpen;
-            if (this.computerPanelOpen) {
-                this.hasUnreadNotification = false;
-                if (
-                    this.selectedInboxIndex < 0 &&
-                    this.inboxEmails.length > 0
-                ) {
-                    this.selectedInboxIndex = 0;
-                }
-                this.refreshEmailPanel();
-            }
-
-            this.updatePanelVisibility();
-            this.refreshComputerTexture();
-        });
-
-        this.filesZone.on("pointerover", () => {
-            if (!this.triageVisible) {
-                return;
-            }
-
-            this.filesHovered = true;
-            this.refreshComputerTexture();
-        });
-        this.filesZone.on("pointerout", () => {
-            this.filesHovered = false;
-            this.refreshComputerTexture();
-        });
-        this.filesZone.on("pointerdown", () => {
-            if (!this.triageVisible || this.interruptActive) {
-                return;
-            }
-
-            this.filesPanelOpen = !this.filesPanelOpen;
-            this.updatePanelVisibility();
-        });
-
-        this.refreshComputerTexture();
-    }
-
-    private refreshComputerTexture() {
-        const hasNotification =
-            this.hasUnreadNotification && !this.computerPanelOpen;
-
-        if (hasNotification && this.computerHovered) {
-            const key =
-                this.textures.exists("desk-computer-notification-hover") ?
-                    "desk-computer-notification-hover"
-                : this.textures.exists("desk-computer-hover") ?
-                    "desk-computer-hover"
-                :   "desk-computer";
-            this.computerObject.setTexture(key);
-        } else if (hasNotification) {
-            const key =
-                this.textures.exists("desk-computer-notification") ?
-                    "desk-computer-notification"
-                :   "desk-computer";
-            this.computerObject.setTexture(key);
-        } else if (this.computerHovered) {
-            const key =
-                this.textures.exists("desk-computer-hover") ?
-                    "desk-computer-hover"
-                :   "desk-computer";
-            this.computerObject.setTexture(key);
-        } else {
-            this.computerObject.setTexture("desk-computer");
-        }
-
-        this.filesObject.setTexture(
-            this.filesHovered && this.textures.exists("desk-files-hover") ?
-                "desk-files-hover"
-            :   "desk-files",
-        );
-    }
-
-    private buildUI() {
-        this.add
-            .rectangle(512, 54, 980, 84, 0xd6dde7, 0.95)
-            .setStrokeStyle(2, 0x7f8b9c)
-            .setDepth(10);
-
-        this.headerText = this.add
-            .text(32, 17, "", {
-                fontSize: "30px",
-                color: "#221f1a",
-                fontStyle: "bold",
-            })
-            .setDepth(11);
-
-        this.scoreText = this.add
-            .text(32, 57, "", {
-                fontSize: "22px",
-                color: "#000000",
-            })
-            .setStyle({ backgroundColor: "#d6dce4" })
-            .setDepth(11);
-
-        this.moneyText = this.add
-            .text(250, 57, "", {
-                fontSize: "22px",
-                color: "#2d5d31",
-            })
-            .setStyle({ backgroundColor: "transparent" })
-            .setDepth(11);
-
-        this.progressText = this.add
-            .text(460, 59, "", {
-                fontSize: "20px",
-                color: "#4b5563",
-            })
-            .setStyle({ backgroundColor: "transparent" })
-            .setDepth(11);
-
-        this.feedbackText = this.add
-            .text(32, 100, "", {
-                fontSize: "24px",
-                color: "#ffffff",
-                wordWrap: { width: 960 },
-            })
-            .setDepth(11);
-
-        this.computerPanelBg = this.add
-            .rectangle(770, 418, 470, 540, 0xe3e9f1, 0.93)
-            .setStrokeStyle(2, 0x8896a9)
-            .setDepth(15)
-            .setVisible(false);
-
-        this.filesPanelBg = this.add
-            .rectangle(255, 418, 410, 540, 0xe3e9f1, 0.93)
-            .setStrokeStyle(2, 0x8896a9)
-            .setDepth(15)
-            .setVisible(false);
-
-        this.emailPanelTitle = this.add
-            .text(560, 150, "Email Monitor", {
-                fontSize: "24px",
-                color: "#2a261f",
-                fontStyle: "bold",
-            })
-            .setDepth(16)
-            .setVisible(false);
-
-        this.emailSwitchText = this.add
-            .text(560, 186, "", {
-                fontSize: "16px",
-                color: "#4c4338",
-            })
-            .setDepth(16)
-            .setVisible(false);
-
-        this.previousEmailButton = this.createButton(
-            790,
-            188,
-            "< Prev",
-            "#6c7078",
-            () => {
-                this.showPreviousEmail();
-            },
-            90,
-        )
-            .setDepth(16)
-            .setVisible(false);
-
-        this.nextEmailButton = this.createButton(
-            900,
-            188,
-            "Next >",
-            "#6c7078",
-            () => {
-                this.showNextEmail();
-            },
-            90,
-        )
-            .setDepth(16)
-            .setVisible(false);
-
-        this.fromText = this.add
-            .text(560, 230, "", {
-                fontSize: "17px",
-                color: "#22201a",
-                wordWrap: { width: 430 },
-                lineSpacing: 6,
-            })
-            .setDepth(16)
-            .setVisible(false);
-
-        this.domainText = this.add
-            .text(560, 270, "", {
-                fontSize: "17px",
-                color: "#22201a",
-                wordWrap: { width: 430 },
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.domainText.on("pointerdown", () => {
-            this.selectEmailPart("domain");
-        });
-
-        this.subjectText = this.add
-            .text(560, 312, "", {
-                fontSize: "17px",
-                color: "#22201a",
-                wordWrap: { width: 430 },
-                lineSpacing: 4,
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.subjectText.on("pointerdown", () => {
-            this.selectEmailPart("subject");
-        });
-
-        this.contentLabelText = this.add
-            .text(560, 372, "Content:", {
-                fontSize: "17px",
-                color: "#22201a",
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.contentLabelText.on("pointerdown", () => {
-            this.selectEmailPart("content");
-        });
-
-        this.contentText = this.add
-            .text(560, 402, "", {
-                fontSize: "17px",
-                color: "#22201a",
-                wordWrap: { width: 430 },
-                lineSpacing: 6,
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.contentText.on("pointerdown", () => {
-            this.selectEmailPart("content");
-        });
-
-        this.validButton = this.createButton(
-            615,
-            690,
-            "Valid",
-            "#4b6a4f",
-            () => {
-                this.classifySelectedEmail("valid");
-            },
-            120,
-        )
-            .setDepth(16)
-            .setVisible(false);
-
-        this.spamButton = this.createButton(
-            770,
-            690,
-            "Spam",
-            "#7f7244",
-            () => {
-                this.classifySelectedEmail("spam");
-            },
-            120,
-        )
-            .setDepth(16)
-            .setVisible(false);
-
-        this.phishingButton = this.createButton(
-            925,
-            690,
-            "Phishing",
-            "#6a4444",
-            () => {
-                this.classifySelectedEmail("phishing");
-            },
-            120,
-        )
-            .setDepth(16)
-            .setVisible(false);
-
-        this.rulebookTitleText = this.add
-            .text(70, 150, "Rulebook", {
-                fontSize: "24px",
-                color: "#2a261f",
-                fontStyle: "bold",
-            })
-            .setDepth(16)
-            .setVisible(false);
-
-        this.rulebookHelpText = this.add
-            .text(70, 186, "", {
-                fontSize: "15px",
-                color: "#41392d",
-                wordWrap: { width: 370 },
-                lineSpacing: 2,
-            })
-            .setDepth(16)
-            .setVisible(false);
-
-        this.rule1Text = this.add
-            .text(70, 318, "", {
-                fontSize: "16px",
-                color: "#22201a",
-                wordWrap: { width: 370 },
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.rule1Text.on("pointerdown", () => {
-            this.selectRule(1);
-        });
-
-        this.rule2Text = this.add
-            .text(70, 357, "", {
-                fontSize: "16px",
-                color: "#22201a",
-                wordWrap: { width: 370 },
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.rule2Text.on("pointerdown", () => {
-            this.selectRule(2);
-        });
-
-        this.rule3Text = this.add
-            .text(70, 396, "", {
-                fontSize: "16px",
-                color: "#22201a",
-                wordWrap: { width: 370 },
-            })
-            .setDepth(16)
-            .setVisible(false)
-            .setInteractive({ useHandCursor: true });
-        this.rule3Text.on("pointerdown", () => {
-            this.selectRule(3);
-        });
-
-        this.toggleSearchButton = this.createButton(
-            255,
-            464,
-            "Inspect Tool",
-            "#71757a",
-            () => {
-                this.toggleSearchMode();
-            },
-            320,
-        )
-            .setDepth(16)
-            .setVisible(false);
-        this.toggleSearchButton.on("pointerover", () => {
-            this.inspectButtonHovered = true;
-            this.updateSearchButtonStyles();
-        });
-        this.toggleSearchButton.on("pointerout", () => {
-            this.inspectButtonHovered = false;
-            this.updateSearchButtonStyles();
-        });
-
-        this.inspectText = this.add
-            .text(70, 516, "", {
-                fontSize: "15px",
-                color: "#22201a",
-                wordWrap: { width: 370 },
-                lineSpacing: 5,
-            })
-            .setDepth(16)
-            .setVisible(false);
-
-        this.endDayTitle = this.add
-            .text(512, 260, "", {
-                fontSize: "42px",
-                color: "#ffffff",
-                fontStyle: "bold",
-            })
-            .setOrigin(0.5)
-            .setDepth(20)
-            .setVisible(false);
-
-        this.endDaySummary = this.add
-            .text(512, 350, "", {
-                fontSize: "26px",
-                color: "#ffffff",
-                align: "center",
-                wordWrap: { width: 700 },
-                lineSpacing: 8,
-            })
-            .setOrigin(0.5)
-            .setDepth(20)
-            .setVisible(false);
-
-        this.toShopButton = this.createButton(
-            512,
-            460,
-            "Enter Shop",
-            "#245e2b",
-            () => {
-                this.enterShop();
-            },
-            240,
-        )
-            .setDepth(20)
-            .setVisible(false);
-
-        this.finalTitle = this.add
-            .text(512, 250, "", {
-                fontSize: "48px",
-                color: "#ffffff",
-                fontStyle: "bold",
-                align: "center",
-            })
-            .setOrigin(0.5)
-            .setDepth(20)
-            .setVisible(false);
-
-        this.finalSummary = this.add
-            .text(512, 360, "", {
-                fontSize: "28px",
-                color: "#ffffff",
-                align: "center",
-                wordWrap: { width: 760 },
-                lineSpacing: 8,
-            })
-            .setOrigin(0.5)
-            .setDepth(20)
-            .setVisible(false);
-
-        this.restartButton = this.createButton(
-            512,
-            500,
-            "Restart Game",
-            "#2c4a77",
-            () => {
-                this.scene.restart();
-            },
-            240,
-        )
-            .setDepth(20)
-            .setVisible(false);
-
-        this.rulebookHelpText.setText(
-            "Open the left files panel to inspect rules.\n" +
-                "Open the right computer panel to inspect emails.\n\n" +
-                "Allowed domains:\n" +
-                "campus.edu, company.com, cityhealth.org",
-        );
-
-        this.rule1Text.setText("Rule 1: Domain must be approved.");
-        this.rule2Text.setText("Rule 2: Subject should look normal.");
-        this.rule3Text.setText("Rule 3: Content cannot ask for credentials.");
-
-        this.inspectText.setText(
-            "Inspect Panel\n\nToggle Inspect Tool, then select a rule and a matching email part.",
-        );
-    }
-
     private createButton(
         x: number,
         y: number,
@@ -776,7 +772,9 @@ export class Level1 extends Scene {
             .text(x, y, label, {
                 fontFamily: "Pix32",
                 fontSize: "16px",
-                color: "#ffffff",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
                 backgroundColor,
                 fixedWidth,
                 align: "center",
@@ -822,19 +820,24 @@ export class Level1 extends Scene {
             this.subjectText,
             this.contentLabelText,
             this.contentText,
+            this.attachmentText,
             this.emailSwitchText,
             this.previousEmailButton,
             this.nextEmailButton,
+            this.powerupStatusText,
+            this.hintButton,
+            this.revealButton,
             this.rulebookTitleText,
-            this.rulebookHelpText,
-            this.rule1Text,
-            this.rule2Text,
-            this.rule3Text,
-            this.inspectText,
+            this.rulebookPageText,
+            this.rulebookBodyText,
+            this.previousRulePageButton,
+            this.nextRulePageButton,
+            this.rulebookCoreButton,
+            this.rulebookRosterButton,
+            this.rulebookTodayButton,
+            ...this.companyRuleButtons,
             this.validButton,
-            this.spamButton,
             this.phishingButton,
-            this.toggleSearchButton,
             this.endDayTitle,
             this.endDaySummary,
             this.toShopButton,
@@ -851,8 +854,9 @@ export class Level1 extends Scene {
     private startDay(day: number) {
         this.clearArrivalTimers();
         this.clearInterrupt();
+        this.clearStatusTimers();
 
-        this.day = day;
+        this.day = Math.min(day, MAX_DAYS);
         this.dayPoints = 0;
         this.emailsProcessed = 0;
         this.inboxEmails = [];
@@ -861,14 +865,22 @@ export class Level1 extends Scene {
         this.hasUnreadNotification = false;
         this.computerPanelOpen = false;
         this.filesPanelOpen = false;
+        this.revealedEmails = new WeakSet<EmailCase>();
 
-        const amount = this.dayEmailCounts[this.day - 1];
-        const shuffled = Phaser.Utils.Array.Shuffle([...this.emailPool]);
-        this.pendingArrivalEmails = shuffled.slice(0, amount);
-        this.totalEmailsForDay = amount;
+        const dayPlan = this.getDayPlan();
+        this.rulebookPages = getRulebookPages(dayPlan);
+        this.rulebookPageIndex = 0;
+        this.refreshRulebook();
 
-        const targetDuration = this.dayDurationTargetsMs[this.day - 1] ?? 90000;
-        this.dayEmailIntervalMs = Math.max(2500, targetDuration / amount);
+        this.pendingArrivalEmails = Phaser.Utils.Array.Shuffle([
+            ...dayPlan.emails,
+        ]);
+        this.totalEmailsForDay = this.pendingArrivalEmails.length;
+
+        const targetDuration =
+            this.dayDurationTargetsMs[this.day - 1] ??
+            this.dayDurationTargetsMs[this.dayDurationTargetsMs.length - 1];
+        this.dayEmailIntervalMs = targetDuration / this.totalEmailsForDay;
 
         this.showTriageUI(true);
         this.showEndDayUI(false);
@@ -877,28 +889,36 @@ export class Level1 extends Scene {
 
         this.feedbackText
             .setText(
-                `Day ${this.day} begins. Emails now arrive randomly. Open Computer to process and Files to inspect rules.`,
+                `Day ${this.day} begins. Review the rulebook and classify each email.`,
             )
-            .setColor("#000000");
+            .setColor("#2c271f");
 
-        this.resetSearchState();
         this.refreshEmailPanel();
+        this.refreshPowerupUI();
         this.refreshTopBar();
         this.refreshProgressText();
 
         this.scheduleNextEmailArrival();
-        this.scheduleInterruptForDay();
+        this.startInterruptRolls();
     }
 
-    private scheduleInterruptForDay() {
-        const targetDuration = this.dayDurationTargetsMs[this.day - 1] ?? 90000;
-        if (targetDuration < 8000) {
-            return;
-        }
+    private getDayPlan(): DayPlan {
+        return DAYS[this.day - 1] ?? DAYS[DAYS.length - 1];
+    }
 
-        const delay = Phaser.Math.Between(5000, targetDuration - 3000);
-        this.interruptTimer = this.time.delayedCall(delay, () => {
-            this.startInterrupt();
+    private startInterruptRolls() {
+        this.interruptRollTimer = this.time.addEvent({
+            delay: 5000,
+            loop: true,
+            callback: () => {
+                if (!this.triageVisible || this.interruptActive) {
+                    return;
+                }
+
+                if (Phaser.Math.FloatBetween(0, 1) <= 1 / 12) {
+                    this.startInterrupt();
+                }
+            },
         });
     }
 
@@ -935,7 +955,6 @@ export class Level1 extends Scene {
                 );
                 this.refreshInterruptBar();
                 if (this.interruptProgress <= 0) {
-                    // Keep it at zero and let player build it back up.
                     this.interruptProgress = 0;
                 }
             },
@@ -962,15 +981,16 @@ export class Level1 extends Scene {
     }
 
     private clearInterrupt() {
-        if (this.interruptTimer) {
-            this.interruptTimer.remove(false);
-            this.interruptTimer = null;
+        if (this.interruptRollTimer) {
+            this.interruptRollTimer.remove(false);
+            this.interruptRollTimer = null;
         }
         if (this.interruptTick) {
             this.interruptTick.remove(false);
             this.interruptTick = null;
         }
         this.interruptActive = false;
+
         this.dudeSprite.setVisible(false);
         this.interruptBarBg.setVisible(false);
         this.interruptBarFill.setVisible(false);
@@ -983,8 +1003,8 @@ export class Level1 extends Scene {
         }
 
         const baseDelay = this.dayEmailIntervalMs;
-        const minDelay = Math.max(1200, Math.floor(baseDelay * 0.85));
-        const maxDelay = Math.max(minDelay + 200, Math.floor(baseDelay * 1.15));
+        const minDelay = Math.max(2500, Math.floor(baseDelay * 0.7));
+        const maxDelay = Math.max(minDelay + 500, Math.floor(baseDelay * 1.3));
         const delay = Phaser.Math.Between(minDelay, maxDelay);
 
         const timer = this.time.delayedCall(delay, () => {
@@ -1002,16 +1022,17 @@ export class Level1 extends Scene {
                 this.hasUnreadNotification = true;
             }
 
-            this.feedbackText
-                .setText(
-                    `New email arrived. Inbox: ${this.inboxEmails.length}. Click the computer to review.`,
-                )
-                .setColor("#b00020");
+            this.setStatusBar(
+                `New email arrived. Inbox: ${this.inboxEmails.length}. Click the computer to review.`,
+                "#7a2d25",
+                { waitForHold: true },
+            );
 
-            this.refreshComputerTexture();
+            this.refreshDeskTextures();
             this.refreshProgressText();
             if (this.computerPanelOpen) {
                 this.refreshEmailPanel();
+                this.refreshPowerupUI();
             }
 
             this.scheduleNextEmailArrival();
@@ -1027,6 +1048,66 @@ export class Level1 extends Scene {
         this.arrivalTimers = [];
     }
 
+    private clearStatusTimers() {
+        if (this.deferredFeedbackTimer) {
+            this.deferredFeedbackTimer.remove(false);
+            this.deferredFeedbackTimer = null;
+        }
+
+        if (this.dayFinishTimer) {
+            this.dayFinishTimer.remove(false);
+            this.dayFinishTimer = null;
+        }
+
+        this.feedbackHoldUntilMs = 0;
+    }
+
+    private setStatusBar(
+        message: string,
+        color: string,
+        options: { holdMs?: number; waitForHold?: boolean } = {},
+    ) {
+        const remainingHoldMs = this.feedbackHoldUntilMs - this.time.now;
+
+        if (options.waitForHold && remainingHoldMs > 0) {
+            if (this.deferredFeedbackTimer) {
+                this.deferredFeedbackTimer.remove(false);
+            }
+
+            this.deferredFeedbackTimer = this.time.delayedCall(
+                remainingHoldMs,
+                () => {
+                    this.deferredFeedbackTimer = null;
+                    this.setStatusBar(message, color);
+                },
+            );
+            return;
+        }
+
+        if (this.deferredFeedbackTimer) {
+            this.deferredFeedbackTimer.remove(false);
+            this.deferredFeedbackTimer = null;
+        }
+
+        this.feedbackText.setText(message).setColor(color);
+        this.feedbackHoldUntilMs =
+            options.holdMs && options.holdMs > 0 ?
+                this.time.now + options.holdMs
+            :   0;
+    }
+
+    private scheduleFinishDayAfterStatusHold() {
+        if (this.dayFinishTimer) {
+            this.dayFinishTimer.remove(false);
+        }
+
+        const delay = Math.max(0, this.feedbackHoldUntilMs - this.time.now);
+        this.dayFinishTimer = this.time.delayedCall(delay, () => {
+            this.dayFinishTimer = null;
+            this.finishDay();
+        });
+    }
+
     private refreshEmailPanel() {
         const inboxCount = this.inboxEmails.length;
 
@@ -1039,7 +1120,9 @@ export class Level1 extends Scene {
             this.contentText.setText(
                 "No email selected. New emails will arrive during the day.",
             );
-            this.applyEmailPartStyles(null);
+            this.attachmentText.setText("Attachments: --");
+            this.refreshDecisionButtons(null);
+            this.refreshPowerupUI();
             return;
         }
 
@@ -1059,34 +1142,15 @@ export class Level1 extends Scene {
         this.domainText.setText(`Domain: ${current.domain}`);
         this.subjectText.setText(`Subject: ${current.subject}`);
         this.contentText.setText(current.body);
-        this.applyEmailPartStyles(current);
-    }
-
-    private applyEmailPartStyles(current: EmailCase | null) {
-        const suspicious = current?.suspiciousParts ?? [];
-        const isSuspicious = (part: InspectPart) => suspicious.includes(part);
-
-        this.domainText.setText(
-            current ?
-                `Domain: ${current.domain}${isSuspicious("domain") ? " !!" : ""}`
-            :   "Domain: --",
+        this.attachmentText.setText(
+            `Attachments: ${
+                current.attachments.length > 0 ?
+                    current.attachments.join(", ")
+                :   "none"
+            }`,
         );
-        this.subjectText.setText(
-            current ?
-                `Subject: ${current.subject}${isSuspicious("subject") ? " !!" : ""}`
-            :   "Subject: --",
-        );
-        this.contentText.setText(
-            current ?
-                `${isSuspicious("content") ? "!! " : ""}${current.body}`
-            :   "No email selected. New emails will arrive during the day.",
-        );
-
-        // Keep email text dark by default unless Inspect selection styling changes it.
-        this.domainText.setColor("#1f2430");
-        this.subjectText.setColor("#1f2430");
-        this.contentLabelText.setColor("#1f2430");
-        this.contentText.setColor("#1f2430");
+        this.refreshDecisionButtons(current);
+        this.refreshPowerupUI();
     }
 
     private showPreviousEmail() {
@@ -1098,7 +1162,6 @@ export class Level1 extends Scene {
             (this.selectedInboxIndex - 1 + this.inboxEmails.length) %
             this.inboxEmails.length;
 
-        this.resetSearchState();
         this.refreshEmailPanel();
     }
 
@@ -1110,8 +1173,74 @@ export class Level1 extends Scene {
         this.selectedInboxIndex =
             (this.selectedInboxIndex + 1) % this.inboxEmails.length;
 
-        this.resetSearchState();
         this.refreshEmailPanel();
+    }
+
+    private getCurrentEmail() {
+        if (this.inboxEmails.length === 0 || this.selectedInboxIndex < 0) {
+            return null;
+        }
+
+        return this.inboxEmails[this.selectedInboxIndex] ?? null;
+    }
+
+    private useHint() {
+        const currentEmail = this.getCurrentEmail();
+        if (!currentEmail) {
+            this.feedbackText
+                .setText("No email selected for a hint.")
+                .setColor("#7a2d25");
+            return;
+        }
+
+        if (this.hintCount <= 0) {
+            this.feedbackText
+                .setText("No hints available. Buy one at the shop.")
+                .setColor("#7a2d25");
+            return;
+        }
+
+        this.hintCount -= 1;
+        const hint =
+            currentEmail.violations[0] ??
+            "No obvious rule conflict found. Check the roster, topic, and attachments.";
+
+        this.feedbackText.setText(`Hint: ${hint}`).setColor("#5a4a32");
+        this.refreshPowerupUI();
+    }
+
+    private useReveal() {
+        const currentEmail = this.getCurrentEmail();
+        if (!currentEmail) {
+            this.feedbackText
+                .setText("No email selected to eliminate an answer.")
+                .setColor("#7a2d25");
+            return;
+        }
+
+        if (this.revealCount <= 0) {
+            this.feedbackText
+                .setText("No eliminators available. Buy one at the shop.")
+                .setColor("#7a2d25");
+            return;
+        }
+
+        if (this.revealedEmails.has(currentEmail)) {
+            this.feedbackText
+                .setText("The wrong answer is already eliminated here.")
+                .setColor("#5a4a32");
+            return;
+        }
+
+        this.revealCount -= 1;
+        this.revealedEmails.add(currentEmail);
+
+        const eliminated = currentEmail.type === "valid" ? "Phishing" : "Valid";
+        this.feedbackText
+            .setText(`Eliminated: ${eliminated}.`)
+            .setColor("#5a4a32");
+        this.refreshDecisionButtons(currentEmail);
+        this.refreshPowerupUI();
     }
 
     private classifySelectedEmail(choice: EmailType) {
@@ -1120,26 +1249,49 @@ export class Level1 extends Scene {
                 .setText(
                     "No email selected. Wait for arrivals or open the computer panel.",
                 )
-                .setColor("#ffb1b1");
+                .setColor("#7a2d25");
             return;
         }
 
         const currentEmail = this.inboxEmails[this.selectedInboxIndex];
 
+        if (
+            this.revealedEmails.has(currentEmail) &&
+            choice !== currentEmail.type
+        ) {
+            this.feedbackText
+                .setText(
+                    "That answer was eliminated. Choose the remaining option.",
+                )
+                .setColor("#7a2d25");
+            return;
+        }
+
         if (choice === currentEmail.type) {
             this.totalPoints += 1;
             this.dayPoints += 1;
-            this.feedbackText
-                .setText("Correct classification: +1 point.")
-                .setColor("#9effa0");
+            this.setStatusBar("Correct classification: +1 point.", "#1f5c35", {
+                holdMs: this.classificationFeedbackHoldMs,
+            });
+        } else if (this.shieldActive) {
+            this.shieldActive = false;
+            this.setStatusBar(
+                `Shield absorbed the mistake. This email was ${currentEmail.type}.`,
+                "#5a4a32",
+                { holdMs: this.classificationFeedbackHoldMs },
+            );
         } else {
+            const reasonText =
+                currentEmail.violations.length > 0 ?
+                    ` Watch for: ${currentEmail.violations.join("; ")}.`
+                :   "";
             this.totalPoints -= 1;
             this.dayPoints -= 1;
-            this.feedbackText
-                .setText(
-                    `Incorrect. This email was ${currentEmail.type}. -1 point.`,
-                )
-                .setColor("#ff9f9f");
+            this.setStatusBar(
+                `Incorrect. This email was ${currentEmail.type}.${reasonText} -1 point.`,
+                "#7a2d25",
+                { holdMs: this.classificationFeedbackHoldMs },
+            );
         }
 
         this.inboxEmails.splice(this.selectedInboxIndex, 1);
@@ -1151,189 +1303,73 @@ export class Level1 extends Scene {
             this.selectedInboxIndex = this.inboxEmails.length - 1;
         }
 
-        this.resetSearchState();
         this.refreshTopBar();
         this.refreshProgressText();
         this.refreshEmailPanel();
+        this.refreshPowerupUI();
 
         if (this.emailsProcessed >= this.totalEmailsForDay) {
-            this.finishDay();
+            this.scheduleFinishDayAfterStatusHold();
         }
     }
 
-    private toggleSearchMode() {
-        this.searchMode = !this.searchMode;
-
-        if (!this.searchMode) {
-            this.selectedRule = null;
-            this.selectedPart = null;
-            this.inspectText.setText(
-                "Inspect Panel\n\nInspect Tool OFF. Toggle it ON to inspect.",
-            );
-        } else {
-            this.inspectText.setText(
-                "Inspect Panel\n\nInspect Tool ON. Select a rule and a related email part.",
-            );
+    private showPreviousRulePage() {
+        if (this.rulebookPages.length === 0) {
+            return;
         }
 
-        this.updateSearchButtonStyles();
+        this.rulebookPageIndex =
+            (this.rulebookPageIndex - 1 + this.rulebookPages.length) %
+            this.rulebookPages.length;
+        this.refreshRulebook();
     }
 
-    private selectRule(rule: RuleId) {
-        if (!this.searchMode) {
-            this.inspectText.setText(
-                "Inspect Panel\n\nEnable Inspect Tool first.",
-            );
+    private showNextRulePage() {
+        if (this.rulebookPages.length === 0) {
             return;
         }
 
-        this.selectedRule = rule;
-        this.updateSearchButtonStyles();
-        this.evaluateSearchSelection();
+        this.rulebookPageIndex =
+            (this.rulebookPageIndex + 1) % this.rulebookPages.length;
+        this.refreshRulebook();
     }
 
-    private selectEmailPart(part: InspectPart) {
-        if (!this.searchMode) {
-            this.inspectText.setText(
-                "Inspect Panel\n\nEnable Inspect Tool first.",
-            );
-            return;
-        }
-
-        if (this.inboxEmails.length === 0 || this.selectedInboxIndex < 0) {
-            this.inspectText.setText(
-                "Inspect Panel\n\nNo email selected. Pick an email in the computer panel.",
-            );
-            return;
-        }
-
-        this.selectedPart = part;
-        this.updateSearchButtonStyles();
-        this.evaluateSearchSelection();
-    }
-
-    private evaluateSearchSelection() {
-        if (!this.selectedRule || !this.selectedPart) {
-            return;
-        }
-
-        if (this.inboxEmails.length === 0 || this.selectedInboxIndex < 0) {
-            return;
-        }
-
-        const currentEmail = this.inboxEmails[this.selectedInboxIndex];
-        const expectedPartByRule: Record<RuleId, InspectPart> = {
-            1: "domain",
-            2: "subject",
-            3: "content",
-        };
-
-        const selectedMatchesRule =
-            expectedPartByRule[this.selectedRule] === this.selectedPart;
-
-        if (!selectedMatchesRule) {
-            this.inspectText
-                .setColor("#ffd27f")
-                .setText(
-                    "Inspect Result\n\nRule/email mismatch.\nSelect the matching rule and email part.",
-                );
-            return;
-        }
-
-        const suspiciousParts = currentEmail.suspiciousParts;
-        const selectedIsSuspicious = suspiciousParts.includes(
-            this.selectedPart,
+    private showRulebookPageByTitle(title: string) {
+        const pageIndex = this.rulebookPages.findIndex(
+            (page) => page.title === title,
         );
 
-        if (selectedIsSuspicious) {
-            this.inspectText
-                .setColor("#b00020")
-                .setText(
-                    `Inspect Result\n\nDiscrepancy detected.\nMatched suspicious ${this.selectedPart}.`,
-                );
+        if (pageIndex < 0) {
             return;
         }
 
-        this.inspectText
-            .setColor("#9effa0")
-            .setText(
-                "Inspect Result\n\nExpected activity.\nNo discrepancy detected.",
-            );
+        this.rulebookPageIndex = pageIndex;
+        this.refreshRulebook();
     }
 
-    private updateSearchButtonStyles() {
-        const inspectButtonColor =
-            this.inspectButtonHovered ? "#657184"
-            : this.searchMode ? "#53657d"
-            : "#71757a";
-
-        this.toggleSearchButton.setStyle({
-            backgroundColor: inspectButtonColor,
-        });
-
-        const expectedPartByRule: Record<RuleId, InspectPart> = {
-            1: "domain",
-            2: "subject",
-            3: "content",
-        };
-
-        const connectionValid =
-            this.selectedRule !== null &&
-            this.selectedPart !== null &&
-            expectedPartByRule[this.selectedRule] === this.selectedPart;
-
-        const selectedColor = connectionValid ? "#1f4f8f" : "#8b5f00";
-        const normalTextColor = "#1f2430";
-
-        this.rule1Text.setStyle({
-            fontStyle: this.selectedRule === 1 ? "bold" : "normal",
-            color: this.selectedRule === 1 ? selectedColor : normalTextColor,
-        });
-        this.rule2Text.setStyle({
-            fontStyle: this.selectedRule === 2 ? "bold" : "normal",
-            color: this.selectedRule === 2 ? selectedColor : normalTextColor,
-        });
-        this.rule3Text.setStyle({
-            fontStyle: this.selectedRule === 3 ? "bold" : "normal",
-            color: this.selectedRule === 3 ? selectedColor : normalTextColor,
-        });
-
-        this.domainText.setStyle({
-            fontStyle: this.selectedPart === "domain" ? "bold" : "normal",
-            color:
-                this.selectedPart === "domain" ?
-                    selectedColor
-                :   normalTextColor,
-        });
-        this.subjectText.setStyle({
-            fontStyle: this.selectedPart === "subject" ? "bold" : "normal",
-            color:
-                this.selectedPart === "subject" ?
-                    selectedColor
-                :   normalTextColor,
-        });
-
-        const contentSelectedStyle = {
-            fontStyle: this.selectedPart === "content" ? "bold" : "normal",
-            color:
-                this.selectedPart === "content" ?
-                    selectedColor
-                :   normalTextColor,
-        };
-        this.contentLabelText.setStyle(contentSelectedStyle);
-        this.contentText.setStyle(contentSelectedStyle);
-    }
-
-    private resetSearchState() {
-        this.searchMode = false;
-        this.selectedRule = null;
-        this.selectedPart = null;
-        this.inspectButtonHovered = false;
-
-        this.inspectText.setText(
-            "Inspect Panel\n\nToggle Inspect Tool, then select a rule and a matching email part.",
+    private refreshRulebook() {
+        const page = this.rulebookPages[this.rulebookPageIndex];
+        this.rulebookPageText.setText(
+            `${page.title} (${this.rulebookPageIndex + 1}/${this.rulebookPages.length})`,
         );
-        this.updateSearchButtonStyles();
+        this.rulebookBodyText.setText(page.body);
+        this.refreshRulebookControls(page);
+    }
+
+    private refreshRulebookControls(page: RulebookPage) {
+        const isCore = page.title.startsWith("Core Rules");
+        const isToday = page.title === `Day ${this.day} Alerts`;
+        const isRoster = page.companyIndex !== undefined;
+
+        this.rulebookCoreButton.setAlpha(isCore ? 1 : 0.72);
+        this.rulebookRosterButton.setAlpha(isRoster ? 1 : 0.72);
+        this.rulebookTodayButton.setAlpha(isToday ? 1 : 0.72);
+
+        this.companyRuleButtons.forEach((button, index) => {
+            button
+                .setVisible(this.filesPanelOpen)
+                .setAlpha(page.companyIndex === index ? 1 : 0.72);
+        });
     }
 
     private refreshProgressText() {
@@ -1342,11 +1378,41 @@ export class Level1 extends Scene {
         );
     }
 
+    private refreshDecisionButtons(currentEmail: EmailCase | null) {
+        this.validButton.setText("Valid").setAlpha(1);
+        this.phishingButton.setText("Phishing").setAlpha(1);
+
+        if (!currentEmail || !this.revealedEmails.has(currentEmail)) {
+            return;
+        }
+
+        if (currentEmail.type === "valid") {
+            this.phishingButton.setText("Phishing X").setAlpha(0.48);
+        } else {
+            this.validButton.setText("Valid X").setAlpha(0.48);
+        }
+    }
+
+    private refreshPowerupUI() {
+        const shieldText = this.shieldActive ? "Shield: armed" : "Shield: none";
+        this.powerupStatusText.setText(
+            `Hints: ${this.hintCount} | Eliminators: ${this.revealCount} | ${shieldText}`,
+        );
+
+        this.hintButton.setText(`Hint (${this.hintCount})`);
+        this.revealButton.setText(`Eliminate (${this.revealCount})`);
+        this.hintButton.setAlpha(this.hintCount > 0 ? 1 : 0.55);
+        this.revealButton.setAlpha(this.revealCount > 0 ? 1 : 0.55);
+    }
+
     private updatePanelVisibility() {
         const showComputerPanel = this.triageVisible && this.computerPanelOpen;
         const showFilesPanel = this.triageVisible && this.filesPanelOpen;
 
         this.computerPanelBg.setVisible(showComputerPanel);
+        for (const item of this.computerPanelChrome) {
+            item.setVisible(showComputerPanel);
+        }
         this.emailPanelTitle.setVisible(showComputerPanel);
         this.emailSwitchText.setVisible(showComputerPanel);
         this.previousEmailButton.setVisible(showComputerPanel);
@@ -1356,29 +1422,55 @@ export class Level1 extends Scene {
         this.subjectText.setVisible(showComputerPanel);
         this.contentLabelText.setVisible(showComputerPanel);
         this.contentText.setVisible(showComputerPanel);
+        this.attachmentText.setVisible(showComputerPanel);
+        this.powerupStatusText.setVisible(showComputerPanel);
+        this.hintButton.setVisible(showComputerPanel);
+        this.revealButton.setVisible(showComputerPanel);
         this.validButton.setVisible(showComputerPanel);
-        this.spamButton.setVisible(showComputerPanel);
         this.phishingButton.setVisible(showComputerPanel);
 
         this.filesPanelBg.setVisible(showFilesPanel);
+        for (const item of this.filesPanelChrome) {
+            item.setVisible(showFilesPanel);
+        }
         this.rulebookTitleText.setVisible(showFilesPanel);
-        this.rulebookHelpText.setVisible(showFilesPanel);
-        this.rule1Text.setVisible(showFilesPanel);
-        this.rule2Text.setVisible(showFilesPanel);
-        this.rule3Text.setVisible(showFilesPanel);
-        this.toggleSearchButton.setVisible(showFilesPanel);
-        this.inspectText.setVisible(showFilesPanel);
+        this.rulebookPageText.setVisible(showFilesPanel);
+        this.rulebookBodyText.setVisible(showFilesPanel);
+        this.previousRulePageButton.setVisible(showFilesPanel);
+        this.nextRulePageButton.setVisible(showFilesPanel);
+        this.rulebookCoreButton.setVisible(showFilesPanel);
+        this.rulebookRosterButton.setVisible(showFilesPanel);
+        this.rulebookTodayButton.setVisible(showFilesPanel);
+        for (const button of this.companyRuleButtons) {
+            button.setVisible(showFilesPanel);
+        }
+
+        if (showFilesPanel && this.rulebookPages.length > 0) {
+            this.refreshRulebookControls(
+                this.rulebookPages[this.rulebookPageIndex],
+            );
+        }
     }
 
     private finishDay() {
         this.clearArrivalTimers();
         this.clearInterrupt();
+        this.shieldActive = false;
 
         const dayPay = this.dayPoints * 5;
         this.money += dayPay;
         this.refreshTopBar();
 
         this.showTriageUI(false);
+
+        if (this.day >= MAX_DAYS) {
+            this.showEnding(
+                "Contract Complete",
+                `Final points: ${this.totalPoints}\nFinal money: $${this.money}`,
+            );
+            return;
+        }
+
         this.showEndDayUI(true);
 
         this.endDayTitle.setText(`Day ${this.day} Complete`);
@@ -1390,7 +1482,7 @@ export class Level1 extends Scene {
 
         this.feedbackText
             .setText("Shift ended. Enter the shop to survive the night.")
-            .setColor("#ffffff");
+            .setColor("#f4ecd8");
     }
 
     private enterShop() {
@@ -1399,6 +1491,8 @@ export class Level1 extends Scene {
             money: this.money,
             totalPoints: this.totalPoints,
             daysWithoutRent: this.daysWithoutRent,
+            hintCount: this.hintCount,
+            revealCount: this.revealCount,
         });
     }
 
@@ -1413,9 +1507,46 @@ export class Level1 extends Scene {
     }
 
     private refreshTopBar() {
-        this.headerText.setText(`Email Inspector - Day ${this.day}/3`);
+        this.headerText.setText(
+            `Email Inspector - Day ${this.day}/${MAX_DAYS}`,
+        );
         this.scoreText.setText(`Points: ${this.totalPoints}`);
         this.moneyText.setText(`Money: $${this.money}`);
+    }
+
+    private refreshDeskTextures() {
+        const hasNotification =
+            this.hasUnreadNotification && !this.computerPanelOpen;
+
+        if (hasNotification && this.computerHovered) {
+            const key =
+                this.textures.exists("desk-computer-notification-hover") ?
+                    "desk-computer-notification-hover"
+                : this.textures.exists("desk-computer-hover") ?
+                    "desk-computer-hover"
+                :   "desk-computer";
+            this.computerObject.setTexture(key);
+        } else if (hasNotification) {
+            const key =
+                this.textures.exists("desk-computer-notification") ?
+                    "desk-computer-notification"
+                :   "desk-computer";
+            this.computerObject.setTexture(key);
+        } else if (this.computerHovered) {
+            const key =
+                this.textures.exists("desk-computer-hover") ?
+                    "desk-computer-hover"
+                :   "desk-computer";
+            this.computerObject.setTexture(key);
+        } else {
+            this.computerObject.setTexture("desk-computer");
+        }
+
+        this.filesObject.setTexture(
+            this.filesHovered && this.textures.exists("desk-files-hover") ?
+                "desk-files-hover"
+            :   "desk-files",
+        );
     }
 
     private showTriageUI(visible: boolean) {
@@ -1426,6 +1557,8 @@ export class Level1 extends Scene {
         this.filesObject.setVisible(visible);
         this.computerZone.setActive(visible).setVisible(visible);
         this.filesZone.setActive(visible).setVisible(visible);
+        this.feedbackBar.setVisible(visible);
+        this.feedbackText.setVisible(visible);
 
         if (!visible) {
             this.computerPanelOpen = false;
@@ -1433,7 +1566,7 @@ export class Level1 extends Scene {
         }
 
         this.updatePanelVisibility();
-        this.refreshComputerTexture();
+        this.refreshDeskTextures();
 
         if (!visible) {
             this.clearInterrupt();
@@ -1441,12 +1574,14 @@ export class Level1 extends Scene {
     }
 
     private showEndDayUI(visible: boolean) {
+        this.endScreenBg.setVisible(visible);
         this.endDayTitle.setVisible(visible);
         this.endDaySummary.setVisible(visible);
         this.toShopButton.setVisible(visible);
     }
 
     private showFinalUI(visible: boolean) {
+        this.endScreenBg.setVisible(visible);
         this.finalTitle.setVisible(visible);
         this.finalSummary.setVisible(visible);
         this.restartButton.setVisible(visible);
