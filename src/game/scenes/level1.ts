@@ -124,6 +124,8 @@ export class Level1 extends Scene {
     private finalTitle!: Phaser.GameObjects.Text;
     private finalSummary!: Phaser.GameObjects.Text;
     private restartButton!: Phaser.GameObjects.Text;
+    private selectButton!: Phaser.GameObjects.Text;
+    private mainmenuButton!: Phaser.GameObjects.Text;
 
     private dudeSprite!: Phaser.GameObjects.Image;
     private interruptBarBg!: Phaser.GameObjects.Rectangle;
@@ -709,6 +711,30 @@ export class Level1 extends Scene {
             "#4d5f55",
             () => {
                 this.scene.restart();
+            },
+            240,
+        )
+            .setDepth(20)
+            .setVisible(false);
+        this.mainmenuButton = this.createButton(
+            512,
+            550,
+            "Main Menu",
+            "#66563b",
+            () => {
+                this.scene.start("MainMenu");
+            },
+            240,
+        )
+            .setDepth(20)
+            .setVisible(false);
+        this.selectButton = this.createButton(
+            512,
+            580,
+            "Select Level",
+            "#66563b",
+            () => {
+                this.scene.start("LevelSelect");
             },
             240,
         )
@@ -1585,5 +1611,7 @@ export class Level1 extends Scene {
         this.finalTitle.setVisible(visible);
         this.finalSummary.setVisible(visible);
         this.restartButton.setVisible(visible);
+        this.mainmenuButton.setVisible(visible);
+        this.selectButton.setVisible(visible);
     }
 }

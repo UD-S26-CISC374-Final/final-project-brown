@@ -87,7 +87,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             .setDepth(100);
 
         const tutorialButton = this.add
-            .text(512, 448, "Tutorial", {
+            .text(312, 448, "Tutorial", {
                 fontFamily: "Pix32",
                 fontSize: 32,
                 color: "#f8f0dc",
@@ -111,7 +111,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             .on("pointerdown", () => this.scene.start("Tutorial"));
 
         const startButton = this.add
-            .text(512, 548, "Start Shift", {
+            .text(512, 448, "Start Shift", {
                 fontFamily: "Pix32",
                 fontSize: 28,
                 color: "#334339",
@@ -133,6 +133,29 @@ export class MainMenu extends Scene implements ChangeableScene {
                 startButton.setScale(1);
             })
             .on("pointerdown", () => this.scene.start("Level1"));
+        const levelSelectButton = this.add
+            .text(732, 448, "Level Select", {
+                fontFamily: "Pix32",
+                fontSize: 28,
+                color: "#334339",
+                stroke: "#efe4c7",
+                strokeThickness: 1,
+                backgroundColor: "#d9c783",
+                padding: { left: 24, right: 24, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                levelSelectButton.setStyle({ backgroundColor: "#e2d39e" });
+                levelSelectButton.setScale(1.03);
+            })
+            .on("pointerout", () => {
+                levelSelectButton.setStyle({ backgroundColor: "#d9c783" });
+                levelSelectButton.setScale(1);
+            })
+            .on("pointerdown", () => this.scene.start("LevelSelect"));
 
         EventBus.emit("current-scene-ready", this);
     }
