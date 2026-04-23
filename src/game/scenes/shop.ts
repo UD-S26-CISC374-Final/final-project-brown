@@ -50,6 +50,9 @@ export class Shop extends Scene {
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
         this.hintCount = data.hintCount ?? 0;
         this.revealCount = data.revealCount ?? 0;
+        this.rentPaid = false;
+        this.foodPaid = false;
+        this.utilitiesPaid = false;
     }
 
     create() {
