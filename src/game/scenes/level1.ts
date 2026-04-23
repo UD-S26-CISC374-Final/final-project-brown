@@ -135,6 +135,7 @@ export class Level1 extends Scene {
     //timer setup
     private timerValue = 300;
     private timerText!: Phaser.GameObjects.Text;
+    //private countdownEvent: Phaser.Time.TimerEvent | null = null;
 
     constructor() {
         super("Level1");
@@ -193,6 +194,7 @@ export class Level1 extends Scene {
                         "Time's Up!",
                         "You ran out of time to sort the emails.",
                     );
+                    //this.countdownEvent?.remove(false);
                 }
             },
         });
@@ -737,8 +739,16 @@ export class Level1 extends Scene {
             "Restart Game",
             "#4d5f55",
             () => {
-                this.scene.restart();
                 this.timerValue = 300;
+                this.scene.start("Level1", {
+                    day: 1,
+                    totalPoints: 0,
+                    money: 0,
+                    daysWithoutRent: 0,
+                    hintCount: 0,
+                    revealCount: 0,
+                    shieldActive: false,
+                });
             },
             240,
         )
