@@ -132,6 +132,10 @@ export class Level1 extends Scene {
     private interruptBarFill!: Phaser.GameObjects.Rectangle;
     private interruptText!: Phaser.GameObjects.Text;
 
+    //timer setup
+    private timerValue = 300;
+    private timerText!: Phaser.GameObjects.Text;
+
     constructor() {
         super("Level1");
     }
@@ -167,8 +171,31 @@ export class Level1 extends Scene {
             );
             return;
         }
-
         this.startDay(this.day);
+
+        this.timerValue = this.timerValue - (this.day - 1) * 15;
+        this.timerText = this.add
+            .text(860, 57, `Time: ${this.timerValue}s`, {
+                fontFamily: "Pix32",
+                fontSize: "22px",
+                color: "#f4ecd8",
+            })
+            .setStyle({ backgroundColor: "#334339" })
+            .setDepth(11);
+        this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => {
+                this.timerValue--;
+                this.timerText.setText(`Time: ${this.timerValue}s`);
+                if (this.timerValue <= 0) {
+                    this.showEnding(
+                        "Time's Up!",
+                        "You ran out of time to sort the emails.",
+                    );
+                }
+            },
+        });
     }
 
     private buildDesk() {
@@ -711,6 +738,7 @@ export class Level1 extends Scene {
             "#4d5f55",
             () => {
                 this.scene.restart();
+                this.timerValue = 300;
             },
             240,
         )
@@ -730,7 +758,7 @@ export class Level1 extends Scene {
             .setVisible(false);
         this.selectButton = this.createButton(
             512,
-            580,
+            600,
             "Select Level",
             "#66563b",
             () => {

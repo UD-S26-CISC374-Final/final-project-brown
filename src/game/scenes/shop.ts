@@ -261,12 +261,12 @@ export class Shop extends Scene {
     private leaveShop() {
         if (!this.foodPaid || !this.utilitiesPaid) {
             this.scene.start("Level1", {
-                day: this.day,
-                totalPoints: this.totalPoints,
-                money: this.money,
-                daysWithoutRent: this.daysWithoutRent,
-                hintCount: this.hintCount,
-                revealCount: this.revealCount,
+                day: 1,
+                totalPoints: 0,
+                money: 0,
+                daysWithoutRent: 0,
+                hintCount: 0,
+                revealCount: 0,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Your family was not fed or utilities were shut off.",
