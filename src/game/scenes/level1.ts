@@ -294,6 +294,17 @@ export class Level1 extends Scene {
             .setDepth(10);
         this.add.rectangle(512, 116, 1024, 6, 0xb5a36a, 0.9).setDepth(10);
 
+        this.mainmenuButton = this.createButton(
+            780,
+            70,
+            "Main Menu",
+            "#66563b",
+            () => {
+                this.scene.start("MainMenu");
+            },
+            120,
+        ).setDepth(14);
+
         this.headerText = this.add
             .text(32, 18, "", {
                 fontSize: "30px",
