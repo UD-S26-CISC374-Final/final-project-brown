@@ -173,7 +173,7 @@ export class Level1 extends Scene {
         }
         this.startDay(this.day);
 
-        this.timerValue = this.timerValue - (this.day - 1) * 15;
+        this.timerValue = 300 - (this.day - 1) * 10;
         this.timerText = this.add
             .text(860, 57, `Time: ${this.timerValue}s`, {
                 fontFamily: "Pix32",
@@ -737,8 +737,16 @@ export class Level1 extends Scene {
             "Restart Game",
             "#4d5f55",
             () => {
-                this.scene.restart();
                 this.timerValue = 300;
+                this.scene.start("Level1", {
+                    day: 1,
+                    totalPoints: 0,
+                    money: 0,
+                    daysWithoutRent: 0,
+                    hintCount: 0,
+                    revealCount: 0,
+                    shieldActive: false,
+                });
             },
             240,
         )
@@ -1323,6 +1331,7 @@ export class Level1 extends Scene {
 
         if (choice === currentEmail.type) {
             this.totalPoints += 1;
+            this.money += 5;
             this.dayPoints += 1;
             this.setStatusBar("Correct classification: +1 point.", "#1f5c35", {
                 holdMs: this.classificationFeedbackHoldMs,
@@ -1341,6 +1350,7 @@ export class Level1 extends Scene {
                 :   "";
             this.totalPoints -= 1;
             this.dayPoints -= 1;
+            this.money -= 5;
             this.setStatusBar(
                 `Incorrect. This email was ${currentEmail.type}.${reasonText} -1 point.`,
                 "#7a2d25",
@@ -1512,7 +1522,6 @@ export class Level1 extends Scene {
         this.shieldActive = false;
 
         const dayPay = this.dayPoints * 5;
-        this.money += dayPay;
         this.refreshTopBar();
 
         this.showTriageUI(false);
