@@ -311,6 +311,7 @@ export class Level1 extends Scene {
                 color: "#f4ecd8",
                 fontStyle: "bold",
             })
+            .setStyle({ backgroundColor: "#334339" })
             .setDepth(11);
 
         this.scoreText = this.add
