@@ -173,7 +173,7 @@ export class Level1 extends Scene {
         }
         this.startDay(this.day);
 
-        this.timerValue = this.timerValue - (this.day - 1) * 15;
+        this.timerValue = 300 - (this.day - 1) * 15;
         this.timerText = this.add
             .text(860, 57, `Time: ${this.timerValue}s`, {
                 fontFamily: "Pix32",
