@@ -1,11 +1,11 @@
 import { Boot } from "./scenes/boot";
-import { GameOver } from "./scenes/game-over";
 import { Level1 as MainGame } from "./scenes/level1";
 import { MainMenu } from "./scenes/main-menu";
 import { CANVAS, Game } from "phaser";
 import { Preloader } from "./scenes/preloader";
 import { Shop } from "./scenes/shop";
 import { Tutorial } from "./scenes/tutorial";
+import { LevelSelect } from "./scenes/levelSelect";
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -15,7 +15,7 @@ const config: Phaser.Types.Core.GameConfig = {
     type: CANVAS,
     parent: "game-container",
     backgroundColor: "#ffffff",
-    scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, GameOver],
+    scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect],
     scale: {
         parent: "game-container",
         mode: Phaser.Scale.FIT,

@@ -124,11 +124,17 @@ export class Level1 extends Scene {
     private finalTitle!: Phaser.GameObjects.Text;
     private finalSummary!: Phaser.GameObjects.Text;
     private restartButton!: Phaser.GameObjects.Text;
+    private selectButton!: Phaser.GameObjects.Text;
+    private mainmenuButton!: Phaser.GameObjects.Text;
 
     private dudeSprite!: Phaser.GameObjects.Image;
     private interruptBarBg!: Phaser.GameObjects.Rectangle;
     private interruptBarFill!: Phaser.GameObjects.Rectangle;
     private interruptText!: Phaser.GameObjects.Text;
+
+    //timer setup
+    private timerValue = 300;
+    private timerText!: Phaser.GameObjects.Text;
 
     constructor() {
         super("Level1");
@@ -165,8 +171,31 @@ export class Level1 extends Scene {
             );
             return;
         }
-
         this.startDay(this.day);
+
+        this.timerValue = this.timerValue - (this.day - 1) * 15;
+        this.timerText = this.add
+            .text(860, 57, `Time: ${this.timerValue}s`, {
+                fontFamily: "Pix32",
+                fontSize: "22px",
+                color: "#f4ecd8",
+            })
+            .setStyle({ backgroundColor: "#334339" })
+            .setDepth(11);
+        this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => {
+                this.timerValue--;
+                this.timerText.setText(`Time: ${this.timerValue}s`);
+                if (this.timerValue <= 0) {
+                    this.showEnding(
+                        "Time's Up!",
+                        "You ran out of time to sort the emails.",
+                    );
+                }
+            },
+        });
     }
 
     private buildDesk() {
@@ -709,6 +738,31 @@ export class Level1 extends Scene {
             "#4d5f55",
             () => {
                 this.scene.restart();
+                this.timerValue = 300;
+            },
+            240,
+        )
+            .setDepth(20)
+            .setVisible(false);
+        this.mainmenuButton = this.createButton(
+            512,
+            550,
+            "Main Menu",
+            "#66563b",
+            () => {
+                this.scene.start("MainMenu");
+            },
+            240,
+        )
+            .setDepth(20)
+            .setVisible(false);
+        this.selectButton = this.createButton(
+            512,
+            600,
+            "Select Level",
+            "#66563b",
+            () => {
+                this.scene.start("LevelSelect");
             },
             240,
         )
@@ -1585,5 +1639,7 @@ export class Level1 extends Scene {
         this.finalTitle.setVisible(visible);
         this.finalSummary.setVisible(visible);
         this.restartButton.setVisible(visible);
+        this.mainmenuButton.setVisible(visible);
+        this.selectButton.setVisible(visible);
     }
 }
