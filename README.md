@@ -8,9 +8,9 @@ TEXT GOES HERE
 
 # Developers
 
-* Name (email)
-* Name (email)
-* Name (email)
+- Name (email)
+- Name (email)
+- Name (email)
 
 # Blurb
 
@@ -30,7 +30,7 @@ TEXT GOES HERE
 
 # Educational Game Design Document
 
-Link to our [egdd](Educational Game Design Document)
+https://github.com/ethanfass/CISC-374-EGD
 
 # Credits
 
