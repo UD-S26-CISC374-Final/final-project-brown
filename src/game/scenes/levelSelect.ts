@@ -91,7 +91,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day2.setStyle({ backgroundColor: "#d9c783" });
                 day2.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 2 }));
 
         const day3 = this.add
             .text(462, 148, "Day 3", {
@@ -115,7 +115,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day3.setStyle({ backgroundColor: "#d9c783" });
                 day3.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 3 }));
 
         const day4 = this.add
             .text(612, 148, "Day 4", {
@@ -139,7 +139,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day4.setStyle({ backgroundColor: "#d9c783" });
                 day4.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 4 }));
 
         const day5 = this.add
             .text(762, 148, "Day 5", {
@@ -163,7 +163,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day5.setStyle({ backgroundColor: "#d9c783" });
                 day5.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 5 }));
 
         const day6 = this.add
             .text(162, 248, "Day 6", {
@@ -187,7 +187,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day6.setStyle({ backgroundColor: "#d9c783" });
                 day6.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 6 }));
 
         const day7 = this.add
             .text(312, 248, "Day 7", {
@@ -211,7 +211,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day7.setStyle({ backgroundColor: "#d9c783" });
                 day7.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 7 }));
 
         const day8 = this.add
             .text(462, 248, "Day 8", {
@@ -235,7 +235,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day8.setStyle({ backgroundColor: "#d9c783" });
                 day8.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 8 }));
 
         const day9 = this.add
             .text(612, 248, "Day 9", {
@@ -259,7 +259,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day9.setStyle({ backgroundColor: "#d9c783" });
                 day9.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 9 }));
 
         const day10 = this.add
             .text(762, 248, "Day 10", {
@@ -283,7 +283,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 day10.setStyle({ backgroundColor: "#d9c783" });
                 day10.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => this.scene.start("Level1", { day: 10 }));
 
         EventBus.emit("current-scene-ready", this);
     }
