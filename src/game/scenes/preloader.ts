@@ -7,7 +7,15 @@ import computerNotificationHoverImage from "../objects/ComputerNotificationHover
 import dudeImage from "../objects/Dude.png";
 import filesImage from "../objects/Files.png";
 import filesHoverImage from "../objects/FilesHover.png";
+import correctDingAudio from "../sounds/correctding.wav";
+import dudeNoiseAudio from "../sounds/dudenoise.wav";
+import emailNotiAudio from "../sounds/emailnoti.wav";
+import fanAudio from "../sounds/fanaudio.wav";
+import mouseClickAudio from "../sounds/mouseclick.wav";
+import pageTurnAudio from "../sounds/pageturn.wav";
 import textBoxImage from "../objects/TextBox.png";
+import wrongBuzzerAudio from "../sounds/wrongbuzzer.wav";
+import { SOUND_KEYS } from "../audio";
 
 export class Preloader extends Scene {
     constructor() {
@@ -15,34 +23,26 @@ export class Preloader extends Scene {
     }
 
     init() {
-        //  We loaded this image in our Boot Scene, so we can display it here
         this.add.image(512, 384, "background");
 
-        //  A simple progress bar. This is the outline of the bar.
         this.add.rectangle(512, 384, 468, 32).setStrokeStyle(1, 0xffffff);
 
-        //  This is the progress bar itself. It will increase in size from the left based on the % of progress.
         const bar = this.add.rectangle(512 - 230, 384, 4, 28, 0xffffff);
 
-        //  Use the 'progress' event emitted by the LoaderPlugin to update the loading bar
         this.load.on("progress", (progress: number) => {
-            //  Update the progress bar (our bar is 464px wide, so 100% = 464px)
             bar.width = 4 + 460 * progress;
         });
     }
 
     preload() {
-        //  Load the assets for the game - Replace with your own assets
         this.load.setPath("assets");
 
         this.load.image("logo", "logo.png");
         this.load.image("star", "star.png");
         this.load.image("phaser-logo", "phaser-logo.png");
 
-        // Imported URLs are already absolute/processed by Vite, so clear setPath.
         this.load.setPath("");
 
-        // Desk scene assets used in Level1.
         this.load.image("desk-background", backgroundDeskImage);
         this.load.image("desk-computer", computerImage);
         this.load.image("desk-computer-hover", computerHoverImage);
@@ -58,13 +58,17 @@ export class Preloader extends Scene {
         this.load.image("desk-files", filesImage);
         this.load.image("desk-files-hover", filesHoverImage);
         this.load.image("desk-textbox", textBoxImage);
+
+        this.load.audio(SOUND_KEYS.fanAudio, fanAudio);
+        this.load.audio(SOUND_KEYS.dudeNoise, dudeNoiseAudio);
+        this.load.audio(SOUND_KEYS.correctDing, correctDingAudio);
+        this.load.audio(SOUND_KEYS.wrongBuzzer, wrongBuzzerAudio);
+        this.load.audio(SOUND_KEYS.pageTurn, pageTurnAudio);
+        this.load.audio(SOUND_KEYS.mouseClick, mouseClickAudio);
+        this.load.audio(SOUND_KEYS.emailNoti, emailNotiAudio);
     }
 
     create() {
-        //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
-        //  For example, you can define global animations here, so we can use them in other scenes.
-
-        //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
         this.scene.start("MainMenu");
     }
 }

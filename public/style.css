@@ -4,6 +4,19 @@
     font-display: swap;
 }
 
+:root {
+    --office-scrollbar-face: #c0c0c0;
+    --office-scrollbar-track: #e0e0e0;
+    --office-scrollbar-shadow: #808080;
+    --office-scrollbar-highlight: #ffffff;
+    --office-scrollbar-button: #c0c0c0;
+}
+
+html {
+    scrollbar-color: var(--office-scrollbar-face) var(--office-scrollbar-track);
+    scrollbar-width: auto;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -25,4 +38,80 @@ body {
 #game-container {
     width: 100%;
     height: 100%;
+}
+
+* {
+    scrollbar-color: var(--office-scrollbar-face) var(--office-scrollbar-track);
+    scrollbar-width: auto;
+}
+
+*::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+    background: var(--office-scrollbar-track);
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--office-scrollbar-track);
+    border: 1px solid var(--office-scrollbar-shadow);
+    border-radius: 0 !important;
+    box-shadow:
+        inset 1px 1px 0 var(--office-scrollbar-highlight),
+        inset -1px -1px 0 var(--office-scrollbar-shadow);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--office-scrollbar-face);
+    border: 1px solid var(--office-scrollbar-shadow);
+    border-radius: 0 !important;
+    box-shadow:
+        inset 1px 1px 0 var(--office-scrollbar-highlight),
+        inset -1px -1px 0 var(--office-scrollbar-shadow);
+}
+
+*::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:active {
+    background: var(--office-scrollbar-button);
+    border-radius: 0 !important;
+}
+
+*::-webkit-scrollbar-corner {
+    background: var(--office-scrollbar-track);
+    border-radius: 0 !important;
+}
+
+*::-webkit-scrollbar-button:single-button {
+    display: block;
+    width: 16px;
+    height: 16px;
+    background-color: var(--office-scrollbar-button);
+    border: 1px solid var(--office-scrollbar-shadow);
+    border-radius: 0 !important;
+    box-shadow:
+        inset 1px 1px 0 var(--office-scrollbar-highlight),
+        inset -1px -1px 0 var(--office-scrollbar-shadow);
+}
+
+*::-webkit-scrollbar-button:single-button:vertical:decrement {
+    background:
+        linear-gradient(135deg, transparent 48%, #000000 49%, #000000 51%, transparent 52%) center 6px / 7px 7px no-repeat,
+        var(--office-scrollbar-button);
+}
+
+*::-webkit-scrollbar-button:single-button:vertical:increment {
+    background:
+        linear-gradient(315deg, transparent 48%, #000000 49%, #000000 51%, transparent 52%) center 5px / 7px 7px no-repeat,
+        var(--office-scrollbar-button);
+}
+
+*::-webkit-scrollbar-button:single-button:horizontal:decrement {
+    background:
+        linear-gradient(45deg, transparent 48%, #000000 49%, #000000 51%, transparent 52%) center 5px / 7px 7px no-repeat,
+        var(--office-scrollbar-button);
+}
+
+*::-webkit-scrollbar-button:single-button:horizontal:increment {
+    background:
+        linear-gradient(225deg, transparent 48%, #000000 49%, #000000 51%, transparent 52%) center 5px / 7px 7px no-repeat,
+        var(--office-scrollbar-button);
 }

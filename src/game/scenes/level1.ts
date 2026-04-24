@@ -1,5 +1,11 @@
 import { Scene } from "phaser";
 import {
+    ensureLoopingSound,
+    playOneShot,
+    SOUND_KEYS,
+    stopSound,
+} from "../audio";
+import {
     DAYS,
     type DayPlan,
     type EmailCase,
@@ -153,6 +159,11 @@ export class Level1 extends Scene {
     }
 
     create() {
+        ensureLoopingSound(this, SOUND_KEYS.fanAudio, { volume: 0.05 });
+        this.events.once("shutdown", () => {
+            stopSound(this, SOUND_KEYS.dudeNoise);
+            stopSound(this, SOUND_KEYS.fanAudio);
+        });
         this.buildDesk();
         this.buildUI();
         this.applyUIFont();
@@ -249,6 +260,7 @@ export class Level1 extends Scene {
 
             this.computerPanelOpen = !this.computerPanelOpen;
             if (this.computerPanelOpen) {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 this.hasUnreadNotification = false;
                 if (
                     this.selectedInboxIndex < 0 &&
@@ -281,6 +293,9 @@ export class Level1 extends Scene {
             }
 
             this.filesPanelOpen = !this.filesPanelOpen;
+            if (this.filesPanelOpen) {
+                playOneShot(this, SOUND_KEYS.pageTurn, { volume: 0.5 });
+            }
             this.updatePanelVisibility();
         });
 
@@ -570,7 +585,7 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookTitleText = this.add
-            .text(44, 186, "Rulebook", {
+            .text(50, 186, "Rules", {
                 fontSize: "28px",
                 color: "#f4ecd8",
                 fontStyle: "bold",
@@ -618,12 +633,12 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         const companyLabels = [
-            { button: "Red", page: "RedForge" },
-            { button: "Blue", page: "BluePeak" },
-            { button: "North", page: "Northstar" },
-            { button: "Stone", page: "StoneGate" },
-            { button: "Clear", page: "ClearPath" },
-            { button: "Iron", page: "IronClad" },
+            { button: "RedF", page: "RedForge" },
+            { button: "BlueP", page: "BluePeak" },
+            { button: "NorthS", page: "NorthStar" },
+            { button: "StoneG", page: "StoneGate" },
+            { button: "ClearP", page: "ClearPath" },
+            { button: "IronC", page: "IronClad" },
         ];
         this.companyRuleButtons = companyLabels.map((company, index) =>
             this.createButton(
@@ -1003,6 +1018,7 @@ export class Level1 extends Scene {
 
         this.interruptActive = true;
         this.interruptProgress = 0.3;
+        ensureLoopingSound(this, SOUND_KEYS.dudeNoise, { volume: 0.32 });
 
         this.dudeSprite.setVisible(true);
         this.interruptBarBg.setVisible(true);
@@ -1043,6 +1059,7 @@ export class Level1 extends Scene {
 
     private endInterrupt() {
         this.interruptActive = false;
+        stopSound(this, SOUND_KEYS.dudeNoise);
         this.dudeSprite.setVisible(false);
         this.interruptBarBg.setVisible(false);
         this.interruptBarFill.setVisible(false);
@@ -1055,6 +1072,7 @@ export class Level1 extends Scene {
     }
 
     private clearInterrupt() {
+        stopSound(this, SOUND_KEYS.dudeNoise);
         if (this.interruptRollTimer) {
             this.interruptRollTimer.remove(false);
             this.interruptRollTimer = null;
@@ -1088,6 +1106,7 @@ export class Level1 extends Scene {
             }
 
             this.inboxEmails.push(nextEmail);
+            playOneShot(this, SOUND_KEYS.emailNoti, { volume: 0.2 });
             if (this.selectedInboxIndex < 0) {
                 this.selectedInboxIndex = 0;
             }
@@ -1342,6 +1361,7 @@ export class Level1 extends Scene {
         }
 
         if (choice === currentEmail.type) {
+            playOneShot(this, SOUND_KEYS.correctDing, { volume: 0.5 });
             this.totalPoints += 1;
             this.money += 5;
             this.dayPoints += 1;
@@ -1349,6 +1369,7 @@ export class Level1 extends Scene {
                 holdMs: this.classificationFeedbackHoldMs,
             });
         } else if (this.shieldActive) {
+            playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.45 });
             this.shieldActive = false;
             this.setStatusBar(
                 `Shield absorbed the mistake. This email was ${currentEmail.type}.`,
@@ -1356,6 +1377,7 @@ export class Level1 extends Scene {
                 { holdMs: this.classificationFeedbackHoldMs },
             );
         } else {
+            playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.45 });
             const reasonText =
                 currentEmail.violations.length > 0 ?
                     ` Watch for: ${currentEmail.violations.join("; ")}.`
@@ -1556,7 +1578,9 @@ export class Level1 extends Scene {
         );
 
         this.feedbackText
-            .setText("Shift ended. Enter the shop to survive the night.")
+            .setText(
+                "Shift ended. Enter the shop to pay essentials and buy powerups.",
+            )
             .setColor("#f4ecd8");
     }
 
@@ -1572,6 +1596,7 @@ export class Level1 extends Scene {
     }
 
     private showEnding(title: string, message: string) {
+        stopSound(this, SOUND_KEYS.dudeNoise);
         this.showTriageUI(false);
         this.showEndDayUI(false);
         this.showFinalUI(true);

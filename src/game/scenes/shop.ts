@@ -1,4 +1,5 @@
 import { Scene } from "phaser";
+import { playOneShot, SOUND_KEYS } from "../audio";
 import { MAX_DAYS } from "../email-content";
 
 type ShopItem = "food" | "utilities" | "rent" | "hint" | "shield" | "reveal";
@@ -50,9 +51,10 @@ export class Shop extends Scene {
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
         this.hintCount = data.hintCount ?? 0;
         this.revealCount = data.revealCount ?? 0;
-        this.rentPaid = false;
-        this.foodPaid = false;
-        this.utilitiesPaid = false;
+        this.foodPaid = this.day === 1;
+        this.utilitiesPaid = this.day === 1;
+        this.rentPaid = this.day === 1;
+        this.shieldPurchased = false;
     }
 
     create() {
@@ -93,7 +95,7 @@ export class Shop extends Scene {
             .text(
                 512,
                 296,
-                "Food and utilities are required every day.\nPay rent at least once every other day.\nEssentials cost $3.",
+                "Buy food and utilities every day.\nPay rent at least once every other day.\nDay 1 essentials are already covered. Essentials cost $3 each.",
                 {
                     fontFamily: "Pix32",
                     fontSize: "22px",
@@ -161,7 +163,11 @@ export class Shop extends Scene {
             })
             .setOrigin(0.5);
 
-        this.updateStatus("Make your purchases.", "#2f4b36");
+        const introMessage =
+            this.day === 1 ?
+                "Day 1 essentials are already paid. Buy powerups or continue."
+            :   "Make your purchases.";
+        this.updateStatus(introMessage, "#2f4b36");
     }
 
     private createButton(
@@ -189,7 +195,10 @@ export class Shop extends Scene {
 
         const hoverColor = this.brightenColor(backgroundColor, 18);
 
-        button.on("pointerdown", onClick);
+        button.on("pointerdown", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+            onClick();
+        });
         button.on("pointerover", () => {
             button.setStyle({ backgroundColor: hoverColor });
             button.setScale(1.02);

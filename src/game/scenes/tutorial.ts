@@ -1,5 +1,7 @@
 import { Scene } from "phaser";
 
+import { playOneShot, SOUND_KEYS } from "../audio";
+
 interface TutorialPage {
     title: string;
     body: string;
@@ -37,6 +39,14 @@ export class Tutorial extends Scene {
             body:
                 "Sometimes the office dude barges into your focus. When he appears, your panels close and the distraction meter starts falling.\n\n" +
                 "Press Space repeatedly to ignore the conversation and get back to the inbox. If you freeze, the shift keeps moving while you lose control of the desk.",
+        },
+        {
+            title: "The Shop",
+            accent: "BETWEEN SHIFTS",
+            body:
+                "After each shift, you can enter the shop before the next day begins.\n\n" +
+                "To stay afloat, you must buy food and utilities every day, and you must pay rent at least once every other day. Day 1 is covered for you, but after that the essentials cost $3 each.\n\n" +
+                "The shop also sells powerups: Hint ($5) reveals a clue about the selected email, Shield ($10) blocks one mistake on the next shift, and Eliminate ($15) removes one wrong answer on the selected email.",
         },
     ];
 
@@ -160,7 +170,10 @@ export class Tutorial extends Scene {
             .on("pointerout", () => {
                 button.setStyle({ backgroundColor: "#44624c" });
             })
-            .on("pointerdown", callback);
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                callback();
+            });
 
         return button;
     }

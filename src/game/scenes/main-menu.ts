@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from "phaser";
 
+import { playOneShot, SOUND_KEYS } from "../audio";
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
@@ -108,7 +109,10 @@ export class MainMenu extends Scene implements ChangeableScene {
                 tutorialButton.setStyle({ backgroundColor: "#44624c" });
                 tutorialButton.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Tutorial"));
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Tutorial");
+            });
 
         const startButton = this.add
             .text(512, 448, "Start Shift", {
@@ -132,7 +136,10 @@ export class MainMenu extends Scene implements ChangeableScene {
                 startButton.setStyle({ backgroundColor: "#d9c783" });
                 startButton.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("Level1"));
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Level1");
+            });
         const levelSelectButton = this.add
             .text(732, 448, "Level Select", {
                 fontFamily: "Pix32",
@@ -155,7 +162,10 @@ export class MainMenu extends Scene implements ChangeableScene {
                 levelSelectButton.setStyle({ backgroundColor: "#d9c783" });
                 levelSelectButton.setScale(1);
             })
-            .on("pointerdown", () => this.scene.start("LevelSelect"));
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("LevelSelect");
+            });
 
         EventBus.emit("current-scene-ready", this);
     }
