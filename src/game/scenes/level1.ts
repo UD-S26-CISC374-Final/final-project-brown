@@ -142,6 +142,9 @@ export class Level1 extends Scene {
     private timerValue = 300;
     private timerText!: Phaser.GameObjects.Text;
 
+    private emailCloseXText!: Phaser.GameObjects.Text;
+    private rulesCloseXText!: Phaser.GameObjects.Text;
+
     constructor() {
         super("Level1");
     }
@@ -159,7 +162,7 @@ export class Level1 extends Scene {
     }
 
     create() {
-        ensureLoopingSound(this, SOUND_KEYS.fanAudio, { volume: 0.05 });
+        ensureLoopingSound(this, SOUND_KEYS.fanAudio, { volume: 0.035 });
         this.events.once("shutdown", () => {
             stopSound(this, SOUND_KEYS.dudeNoise);
             stopSound(this, SOUND_KEYS.fanAudio);
@@ -431,6 +434,16 @@ export class Level1 extends Scene {
             .setDepth(16)
             .setVisible(false);
 
+        this.emailCloseXText = this.add
+            .text(965, 202, " X", {
+                fontFamily: "Pix32",
+                fontSize: "24px",
+                color: "#f4ecd8",
+            })
+            .setOrigin(0.5)
+            .setDepth(17)
+            .setVisible(false);
+
         this.emailSwitchText = this.add
             .text(560, 236, "", {
                 fontSize: "16px",
@@ -591,6 +604,16 @@ export class Level1 extends Scene {
                 fontStyle: "bold",
             })
             .setDepth(16)
+            .setVisible(false);
+
+        this.rulesCloseXText = this.add
+            .text(445, 202, " X", {
+                fontFamily: "Pix32",
+                fontSize: "24px",
+                color: "#f4ecd8",
+            })
+            .setOrigin(0.5)
+            .setDepth(17)
             .setVisible(false);
 
         this.rulebookCoreButton = this.createButton(
@@ -1369,7 +1392,7 @@ export class Level1 extends Scene {
                 holdMs: this.classificationFeedbackHoldMs,
             });
         } else if (this.shieldActive) {
-            playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.45 });
+            playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
             this.shieldActive = false;
             this.setStatusBar(
                 `Shield absorbed the mistake. This email was ${currentEmail.type}.`,
@@ -1513,6 +1536,8 @@ export class Level1 extends Scene {
         }
         this.emailPanelTitle.setVisible(showComputerPanel);
         this.emailSwitchText.setVisible(showComputerPanel);
+        this.emailCloseXText.setVisible(showComputerPanel);
+        this.rulesCloseXText.setVisible(showFilesPanel);
         this.previousEmailButton.setVisible(showComputerPanel);
         this.nextEmailButton.setVisible(showComputerPanel);
         this.fromText.setVisible(showComputerPanel);
