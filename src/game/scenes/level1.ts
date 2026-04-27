@@ -162,7 +162,7 @@ export class Level1 extends Scene {
     }
 
     create() {
-        ensureLoopingSound(this, SOUND_KEYS.fanAudio, { volume: 0.035 });
+        ensureLoopingSound(this, SOUND_KEYS.fanAudio, { volume: 0.0625 });
         this.events.once("shutdown", () => {
             stopSound(this, SOUND_KEYS.dudeNoise);
             stopSound(this, SOUND_KEYS.fanAudio);
