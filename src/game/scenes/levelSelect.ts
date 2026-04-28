@@ -73,7 +73,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
             })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-                this.scene.start("Level1");
+                this.scene.start("Level1", { day: 1 });
             });
 
         const day2 = this.add
@@ -317,6 +317,97 @@ export class LevelSelect extends Scene implements ChangeableScene {
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 this.scene.start("Level1", { day: 10 });
+            });
+
+        this.add
+            .text(520, 355, "— View Endings —", {
+                fontFamily: "Pix32",
+                fontSize: 22,
+                color: "#7a6840",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100);
+
+        const ending1Button = this.add
+            .text(237, 430, "Ending 1", {
+                fontFamily: "Pix32",
+                fontSize: 24,
+                color: "#f4edd8",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#8c7b52",
+                padding: { left: 20, right: 20, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                ending1Button.setStyle({ backgroundColor: "#a89566" });
+                ending1Button.setScale(1.03);
+            })
+            .on("pointerout", () => {
+                ending1Button.setStyle({ backgroundColor: "#8c7b52" });
+                ending1Button.setScale(1);
+            })
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Level1", { endingPreview: 1 });
+            });
+
+        const ending2Button = this.add
+            .text(520, 430, "Ending 2", {
+                fontFamily: "Pix32",
+                fontSize: 24,
+                color: "#f4edd8",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#8c7b52",
+                padding: { left: 20, right: 20, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                ending2Button.setStyle({ backgroundColor: "#a89566" });
+                ending2Button.setScale(1.03);
+            })
+            .on("pointerout", () => {
+                ending2Button.setStyle({ backgroundColor: "#8c7b52" });
+                ending2Button.setScale(1);
+            })
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Level1", { endingPreview: 2 });
+            });
+
+        const ending3Button = this.add
+            .text(803, 430, "Ending 3", {
+                fontFamily: "Pix32",
+                fontSize: 24,
+                color: "#f4edd8",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#8c7b52",
+                padding: { left: 20, right: 20, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(100)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                ending3Button.setStyle({ backgroundColor: "#a89566" });
+                ending3Button.setScale(1.03);
+            })
+            .on("pointerout", () => {
+                ending3Button.setStyle({ backgroundColor: "#8c7b52" });
+                ending3Button.setScale(1);
+            })
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Level1", { endingPreview: 3 });
             });
 
         EventBus.emit("current-scene-ready", this);

@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from "phaser";
 
-import { playOneShot, SOUND_KEYS } from "../audio";
+import { ensureLoopingSound, playOneShot, SOUND_KEYS } from "../audio";
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
@@ -15,6 +15,8 @@ export class MainMenu extends Scene implements ChangeableScene {
     }
 
     create() {
+        ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
+
         this.cameras.main.setBackgroundColor(0x74736d);
 
         this.add
@@ -138,7 +140,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-                this.scene.start("Level1");
+                this.scene.start("Level1", { day: 1 });
             });
         const levelSelectButton = this.add
             .text(732, 448, "Level Select", {
@@ -166,6 +168,15 @@ export class MainMenu extends Scene implements ChangeableScene {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 this.scene.start("LevelSelect");
             });
+
+        if (this.textures.exists("desk-dude")) {
+            this.add
+                .image(960, 992.5, "desk-dude")
+                .setOrigin(0.5, 1)
+                .setScale(0.5)
+                .setAngle(8)
+                .setDepth(50);
+        }
 
         EventBus.emit("current-scene-ready", this);
     }

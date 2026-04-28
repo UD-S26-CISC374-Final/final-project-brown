@@ -11,6 +11,8 @@ interface ShopSceneData {
     daysWithoutRent?: number;
     hintCount?: number;
     revealCount?: number;
+    plotEmailsAccepted?: number;
+    plotEmailsRejected?: number;
 }
 
 export class Shop extends Scene {
@@ -20,6 +22,8 @@ export class Shop extends Scene {
     private daysWithoutRent = 0;
     private hintCount = 0;
     private revealCount = 0;
+    private plotEmailsAccepted = 0;
+    private plotEmailsRejected = 0;
 
     private foodPaid = false;
     private utilitiesPaid = false;
@@ -51,6 +55,8 @@ export class Shop extends Scene {
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
         this.hintCount = data.hintCount ?? 0;
         this.revealCount = data.revealCount ?? 0;
+        this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
+        this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
         this.foodPaid = this.day === 1;
         this.utilitiesPaid = this.day === 1;
         this.rentPaid = this.day === 1;
@@ -279,6 +285,8 @@ export class Shop extends Scene {
                 daysWithoutRent: this.daysWithoutRent,
                 hintCount: this.hintCount,
                 revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Your family was not fed or utilities were shut off.",
@@ -297,6 +305,8 @@ export class Shop extends Scene {
                 daysWithoutRent: updatedDaysWithoutRent,
                 hintCount: this.hintCount,
                 revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Rent went unpaid too long. You must pay rent at least once every other day.",
@@ -312,6 +322,8 @@ export class Shop extends Scene {
                 daysWithoutRent: updatedDaysWithoutRent,
                 hintCount: this.hintCount,
                 revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
                 shopOutcome: "win",
                 outcomeMessage: `Final points: ${this.totalPoints}\nFinal money: $${this.money}`,
             });
@@ -325,6 +337,8 @@ export class Shop extends Scene {
             daysWithoutRent: updatedDaysWithoutRent,
             hintCount: this.hintCount,
             revealCount: this.revealCount,
+            plotEmailsAccepted: this.plotEmailsAccepted,
+            plotEmailsRejected: this.plotEmailsRejected,
             shieldActive: this.shieldPurchased,
             shopOutcome: "continue",
         });

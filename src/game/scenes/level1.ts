@@ -24,6 +24,9 @@ interface LevelSceneData {
     shieldActive?: boolean;
     shopOutcome?: "continue" | "dead" | "win";
     outcomeMessage?: string;
+    plotEmailsAccepted?: number;
+    plotEmailsRejected?: number;
+    endingPreview?: 1 | 2 | 3;
 }
 
 interface RulebookPage {
@@ -51,6 +54,11 @@ export class Level1 extends Scene {
 
     private incomingShopOutcome: LevelSceneData["shopOutcome"];
     private incomingOutcomeMessage = "";
+
+    private plotEmailsAccepted = 0;
+    private plotEmailsRejected = 0;
+    private awaitingPlotInterruptEnd = false;
+    private incomingEndingPreview = 0;
 
     private inboxEmails: EmailCase[] = [];
     private pendingArrivalEmails: EmailCase[] = [];
@@ -138,6 +146,12 @@ export class Level1 extends Scene {
     private interruptBarFill!: Phaser.GameObjects.Rectangle;
     private interruptText!: Phaser.GameObjects.Text;
 
+    private plotDialogPanel!: Phaser.GameObjects.Rectangle;
+    private plotDialogAccent!: Phaser.GameObjects.Rectangle;
+    private dudePlotText!: Phaser.GameObjects.Text;
+    private plotDialogOkButton!: Phaser.GameObjects.Text;
+    private isPlotInterrupt = false;
+
     //timer setup
     private timerValue = 300;
     private timerText!: Phaser.GameObjects.Text;
@@ -159,6 +173,19 @@ export class Level1 extends Scene {
         this.shieldActive = data.shieldActive ?? false;
         this.incomingShopOutcome = data.shopOutcome;
         this.incomingOutcomeMessage = data.outcomeMessage ?? "";
+        this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
+        this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
+        this.incomingEndingPreview = data.endingPreview ?? 0;
+        if (data.endingPreview === 1) {
+            this.plotEmailsAccepted = 7;
+            this.plotEmailsRejected = 0;
+        } else if (data.endingPreview === 2) {
+            this.plotEmailsAccepted = 0;
+            this.plotEmailsRejected = 7;
+        } else if (data.endingPreview === 3) {
+            this.plotEmailsAccepted = 3;
+            this.plotEmailsRejected = 4;
+        }
     }
 
     create() {
@@ -185,6 +212,12 @@ export class Level1 extends Scene {
             );
             return;
         }
+
+        if (this.incomingEndingPreview > 0) {
+            this.showPlotEnding();
+            return;
+        }
+
         this.startDay(this.day);
 
         this.timerValue = 300 - (this.day - 1) * 10;
@@ -438,7 +471,8 @@ export class Level1 extends Scene {
             .text(965, 202, " X", {
                 fontFamily: "Pix32",
                 fontSize: "24px",
-                color: "#f4ecd8",
+                color: "#ff2222",
+                fontStyle: "bold",
             })
             .setOrigin(0.5)
             .setDepth(17)
@@ -458,6 +492,7 @@ export class Level1 extends Scene {
             "< Prev",
             "#5f6359",
             () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.4 });
                 this.showPreviousEmail();
             },
             90,
@@ -471,6 +506,7 @@ export class Level1 extends Scene {
             "Next >",
             "#5f6359",
             () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.4 });
                 this.showNextEmail();
             },
             90,
@@ -610,7 +646,8 @@ export class Level1 extends Scene {
             .text(445, 202, " X", {
                 fontFamily: "Pix32",
                 fontSize: "24px",
-                color: "#f4ecd8",
+                color: "#ff2222",
+                fontStyle: "bold",
             })
             .setOrigin(0.5)
             .setDepth(17)
@@ -857,8 +894,57 @@ export class Level1 extends Scene {
             .setDepth(28)
             .setVisible(false);
 
+        // Plot dialogue panel — themed box that replaces the distraction bar
+        this.plotDialogPanel = this.add
+            .rectangle(512, 643, 740, 116, 0x1a1814)
+            .setStrokeStyle(2, 0xb5a36a)
+            .setDepth(28)
+            .setVisible(false);
+
+        this.plotDialogAccent = this.add
+            .rectangle(512, 588, 740, 4, 0xb5a36a)
+            .setDepth(29)
+            .setVisible(false);
+
+        this.dudePlotText = this.add
+            .text(512, 618, "", {
+                fontFamily: "Pix32",
+                fontSize: "16px",
+                color: "#f4ecd8",
+                align: "center",
+                wordWrap: { width: 700 },
+            })
+            .setOrigin(0.5, 0)
+            .setDepth(29)
+            .setVisible(false);
+
+        this.plotDialogOkButton = this.add
+            .text(512, 682, "  OK  ", {
+                fontFamily: "Pix32",
+                fontSize: "16px",
+                color: "#f4ecd8",
+                backgroundColor: "#2f4b36",
+                stroke: "#b5a36a",
+                strokeThickness: 1,
+                padding: { left: 18, right: 18, top: 8, bottom: 8 },
+            })
+            .setOrigin(0.5)
+            .setDepth(30)
+            .setInteractive({ useHandCursor: true })
+            .setVisible(false);
+
+        this.plotDialogOkButton.on("pointerdown", () => {
+            this.endInterrupt();
+        });
+        this.plotDialogOkButton.on("pointerover", () => {
+            this.plotDialogOkButton.setStyle({ backgroundColor: "#3d6347" });
+        });
+        this.plotDialogOkButton.on("pointerout", () => {
+            this.plotDialogOkButton.setStyle({ backgroundColor: "#2f4b36" });
+        });
+
         this.input.keyboard?.on("keydown-SPACE", () => {
-            if (!this.interruptActive) {
+            if (!this.interruptActive || this.isPlotInterrupt) {
                 return;
             }
 
@@ -1010,8 +1096,14 @@ export class Level1 extends Scene {
         this.refreshTopBar();
         this.refreshProgressText();
 
-        this.scheduleNextEmailArrival();
-        this.startInterruptRolls();
+        const dudeSaying = dayPlan.dudeSaying;
+        if (dudeSaying) {
+            this.awaitingPlotInterruptEnd = true;
+            this.startPlotInterrupt(dudeSaying);
+        } else {
+            this.scheduleNextEmailArrival();
+            this.startInterruptRolls();
+        }
     }
 
     private getDayPlan(): DayPlan {
@@ -1074,6 +1166,26 @@ export class Level1 extends Scene {
         });
     }
 
+    private startPlotInterrupt(saying: string) {
+        if (!this.triageVisible) {
+            return;
+        }
+
+        this.interruptActive = true;
+        this.isPlotInterrupt = true;
+        playOneShot(this, SOUND_KEYS.hey, { volume: 0.6 });
+
+        this.dudeSprite.setVisible(true);
+        this.plotDialogPanel.setVisible(true);
+        this.plotDialogAccent.setVisible(true);
+        this.dudePlotText.setText(saying).setVisible(true);
+        this.plotDialogOkButton.setVisible(true);
+
+        this.computerPanelOpen = false;
+        this.filesPanelOpen = false;
+        this.updatePanelVisibility();
+    }
+
     private refreshInterruptBar() {
         const maxWidth = 700;
         const width = Math.max(6, maxWidth * this.interruptProgress);
@@ -1082,15 +1194,26 @@ export class Level1 extends Scene {
 
     private endInterrupt() {
         this.interruptActive = false;
+        this.isPlotInterrupt = false;
         stopSound(this, SOUND_KEYS.dudeNoise);
         this.dudeSprite.setVisible(false);
         this.interruptBarBg.setVisible(false);
         this.interruptBarFill.setVisible(false);
         this.interruptText.setVisible(false);
+        this.plotDialogPanel.setVisible(false);
+        this.plotDialogAccent.setVisible(false);
+        this.dudePlotText.setVisible(false);
+        this.plotDialogOkButton.setVisible(false);
 
         if (this.interruptTick) {
             this.interruptTick.remove(false);
             this.interruptTick = null;
+        }
+
+        if (this.awaitingPlotInterruptEnd) {
+            this.awaitingPlotInterruptEnd = false;
+            this.scheduleNextEmailArrival();
+            this.startInterruptRolls();
         }
     }
 
@@ -1105,11 +1228,17 @@ export class Level1 extends Scene {
             this.interruptTick = null;
         }
         this.interruptActive = false;
+        this.isPlotInterrupt = false;
+        this.awaitingPlotInterruptEnd = false;
 
         this.dudeSprite.setVisible(false);
         this.interruptBarBg.setVisible(false);
         this.interruptBarFill.setVisible(false);
         this.interruptText.setVisible(false);
+        this.plotDialogPanel.setVisible(false);
+        this.plotDialogAccent.setVisible(false);
+        this.dudePlotText.setVisible(false);
+        this.plotDialogOkButton.setVisible(false);
     }
 
     private scheduleNextEmailArrival() {
@@ -1317,12 +1446,46 @@ export class Level1 extends Scene {
         }
 
         this.hintCount -= 1;
-        const hint =
-            currentEmail.violations[0] ??
-            "No obvious rule conflict found. Check the roster, topic, and attachments.";
-
+        const hint = this.getHintForEmail(currentEmail);
         this.feedbackText.setText(`Hint: ${hint}`).setColor("#5a4a32");
         this.refreshPowerupUI();
+    }
+
+    private getHintForEmail(email: EmailCase): string {
+        const v = (email.violations[0] ?? "").toLowerCase();
+
+        if (v.includes(".exe") || v.includes(".zip") || v.includes(".pdf") || (v.includes("attachment") && !v.includes("does not match"))) {
+            return "Check what types of attachments are allowed right now.";
+        }
+        if (v.includes("attachment does not match") || v.includes("attachment")) {
+            return "Does the attached file actually relate to what the email says?";
+        }
+        if (v.includes("maps to") || v.includes("username does not match")) {
+            return "Look closely at whether the sender name matches the email address.";
+        }
+        if (v.includes("subject and body") || v.includes("subject/body")) {
+            return "Read the subject line and the body — are they about the same thing?";
+        }
+        if (v.includes("does not normally send") || v.includes("topic from wrong")) {
+            return "Think about what topics this company normally handles.";
+        }
+        if (v.includes("does not work at")) {
+            return "Check whether this person actually works at that company.";
+        }
+        if (v.includes("blocked")) {
+            return "Review today's rules — there may be a restriction you're missing.";
+        }
+        if (v.includes("domain") || v.includes("approved")) {
+            return "Look carefully at the domain in the sender's address.";
+        }
+        if (v.includes("credential") || v.includes("verification") || v.includes("urgent")) {
+            return "Be cautious of emails that pressure you to confirm or verify something.";
+        }
+        if (v.includes("weather") || v.includes("banned word")) {
+            return "Check today's special topic restrictions in the rulebook.";
+        }
+
+        return "Review the sender, domain, attachments, and today's special rules.";
     }
 
     private useReveal() {
@@ -1401,18 +1564,29 @@ export class Level1 extends Scene {
             );
         } else {
             playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.45 });
-            const reasonText =
-                currentEmail.violations.length > 0 ?
-                    ` Watch for: ${currentEmail.violations.join("; ")}.`
-                :   "";
+            const firstViolation = currentEmail.violations[0] ?? "";
+            const cutoff = firstViolation.indexOf("Expected:");
+            const shortViolation =
+                cutoff > 0 ?
+                    firstViolation.slice(0, cutoff).trim().replace(/\.$/, "")
+                :   firstViolation;
+            const reasonText = shortViolation ? ` — ${shortViolation}.` : ".";
             this.totalPoints -= 1;
             this.dayPoints -= 1;
             this.money -= 5;
             this.setStatusBar(
-                `Incorrect. This email was ${currentEmail.type}.${reasonText} -1 point.`,
+                `Incorrect (${currentEmail.type})${reasonText} -1 point.`,
                 "#7a2d25",
                 { holdMs: this.classificationFeedbackHoldMs },
             );
+        }
+
+        if (currentEmail.plotEmail) {
+            if (choice === "valid") {
+                this.plotEmailsAccepted++;
+            } else {
+                this.plotEmailsRejected++;
+            }
         }
 
         this.inboxEmails.splice(this.selectedInboxIndex, 1);
@@ -1586,10 +1760,7 @@ export class Level1 extends Scene {
         this.showTriageUI(false);
 
         if (this.day >= MAX_DAYS) {
-            this.showEnding(
-                "Contract Complete",
-                `Final points: ${this.totalPoints}\nFinal money: $${this.money}`,
-            );
+            this.showPlotEnding();
             return;
         }
 
@@ -1617,7 +1788,32 @@ export class Level1 extends Scene {
             daysWithoutRent: this.daysWithoutRent,
             hintCount: this.hintCount,
             revealCount: this.revealCount,
+            plotEmailsAccepted: this.plotEmailsAccepted,
+            plotEmailsRejected: this.plotEmailsRejected,
         });
+    }
+
+    private showPlotEnding() {
+        const isPreview = this.incomingEndingPreview > 0;
+        const stats = isPreview ? "" : `\n\nFinal points: ${this.totalPoints}\nFinal money: $${this.money}`;
+
+        let title: string;
+        let message: string;
+
+        if (this.plotEmailsAccepted === 7) {
+            title = "Ending 1 — Hero Ending";
+            message = `You let all the evidence through.\n\nThe whistleblower's proof reached the press.\n\nThe company's crimes were exposed to the world.\n\nThe cure was released. The cover-up unraveled.\n\nYou are a hero, but now an enemy to many.${stats}`;
+        } else if (this.plotEmailsRejected === 7) {
+            title = "Ending 2 — Company Ending";
+            message = `You blocked every suspicious message.\n\nYour accuracy report was perfect.\n\nThe company thanked you for your loyalty.\n\nThe cure stayed hidden. The cover-up survived.\n\nYou kept your job, and lost the truth.${stats}`;
+        } else {
+            title = "Ending 3 — Removed Ending";
+            message = `You let some evidence through.\n\nNot enough to expose them.\n\nJust enough for them to notice.\n\nThe company reviewed your activity.\n\nYou were removed, just like the last analyst.${stats}`;
+        }
+
+        stopSound(this, SOUND_KEYS.dudeNoise);
+        stopSound(this, SOUND_KEYS.fanAudio);
+        this.scene.start("Ending", { title, message });
     }
 
     private showEnding(title: string, message: string) {

@@ -1,6 +1,6 @@
 import { Scene } from "phaser";
 
-import { playOneShot, SOUND_KEYS } from "../audio";
+import { ensureLoopingSound, playOneShot, SOUND_KEYS, stopSound } from "../audio";
 
 interface TutorialPage {
     title: string;
@@ -61,6 +61,7 @@ export class Tutorial extends Scene {
     private previousButton!: Phaser.GameObjects.Text;
     private nextButton!: Phaser.GameObjects.Text;
     private beginButton!: Phaser.GameObjects.Text;
+    private mainMenuButton!: Phaser.GameObjects.Text;
     private practiceGroup: Phaser.GameObjects.GameObject[] = [];
 
     constructor() {
@@ -68,6 +69,11 @@ export class Tutorial extends Scene {
     }
 
     create() {
+        ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
+        this.events.once("shutdown", () => {
+            stopSound(this, SOUND_KEYS.menuTheme);
+        });
+
         this.cameras.main.setBackgroundColor(0x20251f);
 
         if (this.textures.exists("desk-background")) {
@@ -138,7 +144,10 @@ export class Tutorial extends Scene {
             this.showNextPage();
         });
         this.beginButton = this.createButton(512, 704, "Begin Shift", () => {
-            this.scene.start("Level1");
+            this.scene.start("Level1", { day: 1 });
+        });
+        this.mainMenuButton = this.createButton(196, 704, "Main Menu", () => {
+            this.scene.start("MainMenu");
         });
 
         this.showPage(0);
@@ -150,6 +159,7 @@ export class Tutorial extends Scene {
         label: string,
         callback: () => void,
         width = 178,
+        silent = false,
     ) {
         const button = this.add
             .text(x, y, label, {
@@ -171,7 +181,7 @@ export class Tutorial extends Scene {
                 button.setStyle({ backgroundColor: "#44624c" });
             })
             .on("pointerdown", () => {
-                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                if (!silent) playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 callback();
             });
 
@@ -195,6 +205,7 @@ export class Tutorial extends Scene {
         this.statusText.setText("");
 
         this.previousButton.setVisible(this.pageIndex > 0);
+        this.mainMenuButton.setVisible(this.pageIndex === 0);
         this.nextButton.setVisible(true).setText("Next >");
         this.beginButton.setVisible(false);
     }
@@ -224,6 +235,7 @@ export class Tutorial extends Scene {
         );
         this.statusText.setText("Is this email valid or phishing?");
         this.previousButton.setVisible(true);
+        this.mainMenuButton.setVisible(false);
         this.nextButton.setVisible(false);
         this.beginButton.setVisible(this.practiceSolved);
 
@@ -251,10 +263,10 @@ export class Tutorial extends Scene {
 
         const validButton = this.createButton(396, 560, "Valid", () => {
             this.answerPractice(false);
-        }, 164);
+        }, 164, true);
         const phishingButton = this.createButton(628, 560, "Phishing", () => {
             this.answerPractice(true);
-        }, 164);
+        }, 164, true);
 
         this.practiceGroup.push(rulebook, email, validButton, phishingButton);
     }
@@ -262,6 +274,7 @@ export class Tutorial extends Scene {
     private answerPractice(correct: boolean) {
         if (correct) {
             this.practiceSolved = true;
+            playOneShot(this, SOUND_KEYS.correctDing, { volume: 0.5 });
             this.statusText
                 .setText(
                     "Correct. The sender and domain are real, but payroll is not a RedForge topic. That makes it phishing.",
@@ -271,6 +284,7 @@ export class Tutorial extends Scene {
             return;
         }
 
+        playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
         this.statusText
             .setText(
                 "Not quite. A clean domain is not enough. RedForge does security work, not payroll, so this topic breaks the rulebook.",

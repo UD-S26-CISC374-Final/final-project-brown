@@ -11,6 +11,8 @@ import correctDingAudio from "../sounds/correctding.wav";
 import dudeNoiseAudio from "../sounds/dudenoise.wav";
 import emailNotiAudio from "../sounds/emailnoti.wav";
 import fanAudio from "../sounds/fanaudio.wav";
+import heyAudio from "../sounds/hey.wav";
+import menuThemeAudio from "../sounds/menutheme.wav";
 import mouseClickAudio from "../sounds/mouseclick.wav";
 import pageTurnAudio from "../sounds/pageturn.wav";
 import textBoxImage from "../objects/TextBox.png";
@@ -66,6 +68,8 @@ export class Preloader extends Scene {
         this.load.audio(SOUND_KEYS.pageTurn, pageTurnAudio);
         this.load.audio(SOUND_KEYS.mouseClick, mouseClickAudio);
         this.load.audio(SOUND_KEYS.emailNoti, emailNotiAudio);
+        this.load.audio(SOUND_KEYS.hey, heyAudio);
+        this.load.audio(SOUND_KEYS.menuTheme, menuThemeAudio);
     }
 
     create() {

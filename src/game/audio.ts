@@ -8,6 +8,8 @@ export const SOUND_KEYS = {
     pageTurn: "page-turn",
     mouseClick: "mouse-click",
     emailNoti: "email-noti",
+    hey: "hey",
+    menuTheme: "menu-theme",
 } as const;
 
 export function ensureLoopingSound(
