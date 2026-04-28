@@ -1,75 +1,259 @@
 import { Scene } from "phaser";
 import { playOneShot, SOUND_KEYS, stopSound } from "../audio";
 
-interface EndingSceneData {
-    title?: string;
-    message?: string;
+export interface EndingSceneData {
+    endingType: 1 | 2 | 3;
 }
 
+const INTRO_SCREENS: string[] = [
+    "",
+    "A car arrives outside your house.",
+    "A man steps out and walks to your front door.",
+    "He knocks. You answer.",
+];
+
+const ENDING_SCREENS: Record<number, string[]> = {
+    1: [
+        "The man at the door is not from the company,\nbut one you recognize.",
+        "He tells you the files you let through\nreached the right people.",
+        "The company's servers are being seized.",
+        "The infection zones are being exposed.",
+        "For once, the emails mattered.",
+        "You are a hero,\nbut now an enemy to many.",
+    ],
+    2: [
+        "A company representative stands at your door.",
+        "He thanks you for your excellent work.",
+        "Every suspicious message was contained.",
+        "The leak has been prevented.",
+        "The company continues operating\nlike nothing happened.",
+        "You keep your job and stay afloat.",
+        "Somewhere, the truth stays buried.",
+    ],
+    3: [
+        "The man at the door already knows your name.",
+        "He says the company noticed your inconsistent reports.",
+        "Some dangerous emails were blocked.",
+        "Some dangerous emails were allowed through.",
+        "That made you unpredictable.",
+        "The last employee made the same mistake.",
+        "The company called his disappearance a transfer.",
+        "The man reaches into his coat.",
+        "Bang.",
+    ],
+};
+
 export class Ending extends Scene {
-    private title = "";
-    private message = "";
+    private endingType: 1 | 2 | 3 = 1;
+    private screens: string[] = [];
+    private currentIndex = 0;
+    private messageText!: Phaser.GameObjects.Text;
+    private continueBtn!: Phaser.GameObjects.Text;
+    private imagePlaceholderObjects: Phaser.GameObjects.GameObject[] = [];
 
     constructor() {
         super("Ending");
     }
 
     init(data: EndingSceneData) {
-        this.title = data.title ?? "";
-        this.message = data.message ?? "";
+        this.endingType = data.endingType;
     }
 
     create() {
         stopSound(this, SOUND_KEYS.fanAudio);
+        stopSound(this, SOUND_KEYS.menuTheme);
+        stopSound(this, SOUND_KEYS.dudeNoise);
 
-        this.cameras.main.setBackgroundColor(0x2f3f34);
+        this.cameras.main.setBackgroundColor(0x000000);
 
-        this.add.rectangle(512, 384, 1024, 768, 0x2f3f34, 1).setDepth(0);
+        this.screens = [...INTRO_SCREENS, ...ENDING_SCREENS[this.endingType]];
+        this.currentIndex = 0;
 
-        this.add
-            .rectangle(512, 390, 860, 700, 0x1e2b22, 1)
-            .setStrokeStyle(3, 0xb5a36a)
-            .setDepth(1);
-
-        this.add
-            .rectangle(512, 50, 860, 80, 0x1a1814, 1)
-            .setStrokeStyle(2, 0xb5a36a)
-            .setDepth(2);
-
-        this.add
-            .text(512, 50, this.title, {
+        this.messageText = this.add
+            .text(512, 340, "", {
                 fontFamily: "Pix32",
-                fontSize: "36px",
+                fontSize: "30px",
                 color: "#f4ecd8",
-                fontStyle: "bold",
+                align: "center",
+                wordWrap: { width: 720 },
+                lineSpacing: 14,
+            })
+            .setOrigin(0.5)
+            .setAlpha(0);
+
+        this.continueBtn = this.add
+            .text(512, 680, "Continue", {
+                fontFamily: "Pix32",
+                fontSize: "24px",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#44624c",
+                padding: { left: 30, right: 30, top: 12, bottom: 12 },
+            })
+            .setOrigin(0.5)
+            .setAlpha(0);
+
+        this.continueBtn.on("pointerover", () => {
+            this.continueBtn.setStyle({ backgroundColor: "#53755b" });
+        });
+        this.continueBtn.on("pointerout", () => {
+            this.continueBtn.setStyle({ backgroundColor: "#44624c" });
+        });
+        this.continueBtn.on("pointerdown", () => {
+            this.continueBtn.disableInteractive();
+            this.cameras.main.fadeOut(400, 0, 0, 0);
+        });
+
+        this.cameras.main.on("camerafadeoutcomplete", this.onFadeOutComplete);
+
+        this.showScreen(0);
+    }
+
+    private readonly onFadeOutComplete = () => {
+        this.currentIndex++;
+        if (this.currentIndex >= this.screens.length) {
+            this.cameras.main.off(
+                "camerafadeoutcomplete",
+                this.onFadeOutComplete,
+            );
+            this.showMenuButtons();
+        } else {
+            this.showScreen(this.currentIndex);
+        }
+    };
+
+    private showScreen(index: number) {
+        for (const obj of this.imagePlaceholderObjects) obj.destroy();
+        this.imagePlaceholderObjects = [];
+
+        const text = this.screens[index] ?? "";
+        const isFirst = index === 0;
+        const isLast = index === this.screens.length - 1;
+
+        this.messageText
+            .setY(isLast ? 460 : 340)
+            .setText(text)
+            .setAlpha(0);
+        this.continueBtn
+            .setText(isFirst ? "Next" : "Continue")
+            .setPosition(512, isFirst ? 384 : 660)
+            .setAlpha(0);
+
+        const tweenTargets: Phaser.GameObjects.GameObject[] = [
+            this.messageText,
+            this.continueBtn,
+        ];
+
+        if (isLast) {
+            const box = this.add
+                .rectangle(512, 215, 600, 320, 0x1a1a1a)
+                .setStrokeStyle(2, 0x555555)
+                .setAlpha(0);
+            const label = this.add
+                .text(512, 215, "600 × 320", {
+                    fontFamily: "Pix32",
+                    fontSize: "20px",
+                    color: "#555555",
+                    align: "center",
+                })
+                .setOrigin(0.5)
+                .setAlpha(0);
+            this.imagePlaceholderObjects = [box, label];
+            tweenTargets.push(box, label);
+        }
+
+        this.cameras.main.fadeIn(600, 0, 0, 0);
+        this.cameras.main.once("camerafadeincomplete", () => {
+            this.tweens.add({
+                targets: tweenTargets,
+                alpha: 1,
+                duration: 400,
+                onComplete: () => {
+                    this.continueBtn.setInteractive({ useHandCursor: true });
+                },
+            });
+        });
+    }
+
+    private showMenuButtons() {
+        this.messageText.destroy();
+        this.continueBtn.destroy();
+        for (const obj of this.imagePlaceholderObjects) obj.destroy();
+        this.imagePlaceholderObjects = [];
+
+        const endingNames: Record<number, string> = {
+            1: "Hero",
+            2: "Company",
+            3: "Removal",
+        };
+        const endingName = endingNames[this.endingType];
+
+        const endLabel = this.add
+            .text(512, 220, "— End —", {
+                fontFamily: "Pix32",
+                fontSize: "28px",
+                color: "#b5a36a",
                 align: "center",
             })
             .setOrigin(0.5)
-            .setDepth(3);
+            .setAlpha(0);
 
-        this.add
-            .text(512, 115, this.message, {
+        const achievedLabel = this.add
+            .text(512, 300, `${endingName} Ending Achieved`, {
                 fontFamily: "Pix32",
-                fontSize: "26px",
+                fontSize: "22px",
                 color: "#d4c9a8",
                 align: "center",
-                lineSpacing: 12,
-                wordWrap: { width: 780 },
             })
+            .setOrigin(0.5)
+            .setAlpha(0);
 
-            .setOrigin(0.5, 0)
-            .setDepth(3);
+        const restartBtn = this.createButton(
+            512,
+            410,
+            "Restart Game",
+            "#44624c",
+            () => {
+                this.scene.start("Level1", { day: 1 });
+            },
+        );
+        const menuBtn = this.createButton(
+            512,
+            490,
+            "Main Menu",
+            "#5a4a32",
+            () => {
+                this.scene.start("MainMenu");
+            },
+        );
+        const selectBtn = this.createButton(
+            512,
+            570,
+            "Select Level",
+            "#5a4a32",
+            () => {
+                this.scene.start("LevelSelect");
+            },
+        );
 
-        this.createButton(512, 575, "Restart Game", "#44624c", () => {
-            this.scene.start("Level1", { day: 1 });
-        });
+        for (const obj of [restartBtn, menuBtn, selectBtn]) {
+            obj.setAlpha(0);
+        }
 
-        this.createButton(512, 638, "Main Menu", "#5a4a32", () => {
-            this.scene.start("MainMenu");
-        });
-
-        this.createButton(512, 701, "Select Level", "#5a4a32", () => {
-            this.scene.start("LevelSelect");
+        this.cameras.main.fadeIn(600, 0, 0, 0);
+        this.cameras.main.once("camerafadeincomplete", () => {
+            this.tweens.add({
+                targets: [
+                    endLabel,
+                    achievedLabel,
+                    restartBtn,
+                    menuBtn,
+                    selectBtn,
+                ],
+                alpha: 1,
+                duration: 400,
+            });
         });
     }
 
@@ -97,7 +281,6 @@ export class Ending extends Scene {
             .setInteractive({ useHandCursor: true });
 
         const hoverBg = this.brightenColor(backgroundColor, 20);
-
         button.on("pointerdown", () => {
             playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
             onClick();
@@ -110,6 +293,8 @@ export class Ending extends Scene {
             button.setStyle({ backgroundColor });
             button.setScale(1);
         });
+
+        return button;
     }
 
     private brightenColor(color: string, amount: number) {

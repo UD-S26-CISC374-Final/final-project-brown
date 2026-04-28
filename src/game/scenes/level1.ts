@@ -69,6 +69,7 @@ export class Level1 extends Scene {
     private interruptActive = false;
     private interruptProgress = 0;
     private interruptTick: Phaser.Time.TimerEvent | null = null;
+    private countdownTimer: Phaser.Time.TimerEvent | null = null;
 
     private triageVisible = true;
     private computerPanelOpen = false;
@@ -220,7 +221,7 @@ export class Level1 extends Scene {
 
         this.startDay(this.day);
 
-        this.timerValue = 300 - (this.day - 1) * 10;
+        this.timerValue = 300;
         this.timerText = this.add
             .text(860, 57, `Time: ${this.timerValue}s`, {
                 fontFamily: "Pix32",
@@ -229,17 +230,17 @@ export class Level1 extends Scene {
             })
             .setStyle({ backgroundColor: "#334339" })
             .setDepth(11);
-        this.time.addEvent({
+        this.countdownTimer = this.time.addEvent({
             delay: 1000,
             loop: true,
             callback: () => {
+                if (this.timerValue <= 0) return;
                 this.timerValue--;
                 this.timerText.setText(`Time: ${this.timerValue}s`);
                 if (this.timerValue <= 0) {
-                    this.showEnding(
-                        "Time's Up!",
-                        "You ran out of time to sort the emails.",
-                    );
+                    this.countdownTimer?.remove(false);
+                    this.countdownTimer = null;
+                    this.finishDay();
                 }
             },
         });
@@ -1346,7 +1347,7 @@ export class Level1 extends Scene {
             this.dayFinishTimer.remove(false);
         }
 
-        const delay = Math.max(0, this.feedbackHoldUntilMs - this.time.now);
+        const delay = Math.min(800, Math.max(0, this.feedbackHoldUntilMs - this.time.now));
         this.dayFinishTimer = this.time.delayedCall(delay, () => {
             this.dayFinishTimer = null;
             this.finishDay();
@@ -1794,26 +1795,19 @@ export class Level1 extends Scene {
     }
 
     private showPlotEnding() {
-        const isPreview = this.incomingEndingPreview > 0;
-        const stats = isPreview ? "" : `\n\nFinal points: ${this.totalPoints}\nFinal money: $${this.money}`;
-
-        let title: string;
-        let message: string;
+        let endingType: 1 | 2 | 3;
 
         if (this.plotEmailsAccepted === 7) {
-            title = "Ending 1 — Hero Ending";
-            message = `You let all the evidence through.\n\nThe whistleblower's proof reached the press.\n\nThe company's crimes were exposed to the world.\n\nThe cure was released. The cover-up unraveled.\n\nYou are a hero, but now an enemy to many.${stats}`;
+            endingType = 1;
         } else if (this.plotEmailsRejected === 7) {
-            title = "Ending 2 — Company Ending";
-            message = `You blocked every suspicious message.\n\nYour accuracy report was perfect.\n\nThe company thanked you for your loyalty.\n\nThe cure stayed hidden. The cover-up survived.\n\nYou kept your job, and lost the truth.${stats}`;
+            endingType = 2;
         } else {
-            title = "Ending 3 — Removed Ending";
-            message = `You let some evidence through.\n\nNot enough to expose them.\n\nJust enough for them to notice.\n\nThe company reviewed your activity.\n\nYou were removed, just like the last analyst.${stats}`;
+            endingType = 3;
         }
 
         stopSound(this, SOUND_KEYS.dudeNoise);
         stopSound(this, SOUND_KEYS.fanAudio);
-        this.scene.start("Ending", { title, message });
+        this.scene.start("Ending", { endingType });
     }
 
     private showEnding(title: string, message: string) {

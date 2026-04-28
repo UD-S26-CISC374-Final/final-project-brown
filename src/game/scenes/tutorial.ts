@@ -70,9 +70,6 @@ export class Tutorial extends Scene {
 
     create() {
         ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
-        this.events.once("shutdown", () => {
-            stopSound(this, SOUND_KEYS.menuTheme);
-        });
 
         this.cameras.main.setBackgroundColor(0x20251f);
 
@@ -144,6 +141,7 @@ export class Tutorial extends Scene {
             this.showNextPage();
         });
         this.beginButton = this.createButton(512, 704, "Begin Shift", () => {
+            stopSound(this, SOUND_KEYS.menuTheme);
             this.scene.start("Level1", { day: 1 });
         });
         this.mainMenuButton = this.createButton(196, 704, "Main Menu", () => {

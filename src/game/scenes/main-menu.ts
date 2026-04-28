@@ -1,6 +1,11 @@
 import { GameObjects, Scene } from "phaser";
 
-import { ensureLoopingSound, playOneShot, SOUND_KEYS } from "../audio";
+import {
+    ensureLoopingSound,
+    playOneShot,
+    SOUND_KEYS,
+    stopSound,
+} from "../audio";
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
@@ -37,7 +42,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             .setDepth(4);
 
         this.title = this.add
-            .text(512, 182, "Emails Please", {
+            .text(512, 182, "Emails, Please", {
                 fontFamily: "Pix32",
                 fontSize: 74,
                 color: "#f4ecd8",
@@ -140,6 +145,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                stopSound(this, SOUND_KEYS.menuTheme);
                 this.scene.start("Level1", { day: 1 });
             });
         const levelSelectButton = this.add
