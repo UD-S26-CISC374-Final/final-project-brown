@@ -4,6 +4,9 @@ import { ensureLoopingSound, playOneShot, SOUND_KEYS, stopSound } from "../audio
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
+const W = 1024;
+const H = 768;
+
 export class LevelSelect extends Scene implements ChangeableScene {
     background: GameObjects.Image;
     logo: GameObjects.Image;
@@ -16,34 +19,88 @@ export class LevelSelect extends Scene implements ChangeableScene {
 
     create() {
         ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
-        this.cameras.main.setBackgroundColor(0x74736d);
 
-        // Panel centered on 512x384
+        // --- Background ---
+        if (this.textures.exists("desk-background")) {
+            this.add
+                .image(W / 2, H / 2, "desk-background")
+                .setDisplaySize(W, H)
+                .setDepth(0);
+        } else {
+            this.cameras.main.setBackgroundColor(0x1a2018);
+        }
+        this.add.rectangle(W / 2, H / 2, W, H, 0x090d09, 0.72).setDepth(1);
+
+        // --- Card ---
+        const cardX = W / 2;
+        const cardY = H / 2 + 10;
+        const cardW = 880;
+        const cardH = 530;
+
+        this.add.rectangle(cardX + 8, cardY + 8, cardW, cardH, 0x000000, 0.45).setDepth(2);
         this.add
-            .rectangle(512, 330, 860, 560, 0xefe4c7, 0.96)
-            .setStrokeStyle(4, 0x5d5747)
+            .rectangle(cardX, cardY, cardW, cardH, 0xf0e4c4, 1)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(3);
+        this.add
+            .rectangle(cardX, cardY, cardW - 16, cardH - 16, 0x000000, 0)
+            .setStrokeStyle(1, 0xb5953a)
             .setDepth(3);
 
+        // --- Header ---
+        const headerH = 72;
+        const headerY = cardY - cardH / 2 + headerH / 2;
+
         this.add
-            .text(512, 75, "Select a Day", {
+            .rectangle(cardX, headerY, cardW, headerH, 0x1b3022, 1)
+            .setStrokeStyle(2, 0xb5953a)
+            .setDepth(4);
+        this.add
+            .rectangle(cardX, headerY + headerH / 2 + 1, cardW, 3, 0xd4a830, 1)
+            .setDepth(4);
+
+        this.add
+            .text(cardX, headerY, "Select a Day", {
                 fontFamily: "Pix32",
-                fontSize: 34,
-                color: "#2c271f",
+                fontSize: 52,
+                color: "#f2e8d0",
+                stroke: "#0d180d",
+                strokeThickness: 2,
                 align: "center",
             })
             .setOrigin(0.5)
-            .setDepth(100);
+            .setDepth(10);
 
-        // Day buttons: 5 per row, centered on x=512, spacing=150
-        // x positions: 212, 362, 512, 662, 812
+        // --- Ruled lines ---
+        const gfx = this.add.graphics().setDepth(3);
+        gfx.lineStyle(1, 0xc8a96e, 0.3);
+        const lineTop = headerY + headerH / 2 + 22;
+        for (let i = 0; i < 9; i++) {
+            gfx.moveTo(cardX - cardW / 2 + 28, lineTop + i * 34);
+            gfx.lineTo(cardX + cardW / 2 - 28, lineTop + i * 34);
+        }
+        gfx.strokePath();
+
+        // Red margin line
+        gfx.lineStyle(1, 0xc06050, 0.4);
+        gfx.moveTo(cardX - cardW / 2 + 68, lineTop);
+        gfx.lineTo(cardX - cardW / 2 + 68, cardY + cardH / 2 - 20);
+        gfx.strokePath();
+
+        // --- Day buttons ---
+        const bodyTopY = headerY + headerH / 2 + 16;
+        const row1Y = bodyTopY + 44;
+        const row2Y = row1Y + 78;
+        const dayXPositions = [162, 337, 512, 687, 862];
+
         const dayStyle = {
             fontFamily: "Pix32",
-            fontSize: 28,
-            color: "#334339",
-            stroke: "#efe4c7",
+            fontSize: 26,
+            color: "#2a3a2a",
+            stroke: "#f0e8d4",
             strokeThickness: 1,
-            backgroundColor: "#d9c783",
-            padding: { left: 24, right: 24, top: 10, bottom: 10 },
+            backgroundColor: "#d4a830",
+            padding: { left: 18, right: 18, top: 9, bottom: 9 },
             align: "center",
         };
 
@@ -51,10 +108,10 @@ export class LevelSelect extends Scene implements ChangeableScene {
             const btn = this.add
                 .text(x, y, label, dayStyle)
                 .setOrigin(0.5)
-                .setDepth(100)
+                .setDepth(10)
                 .setInteractive({ useHandCursor: true })
-                .on("pointerover", () => { btn.setStyle({ backgroundColor: "#e2d39e" }); btn.setScale(1.03); })
-                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#d9c783" }); btn.setScale(1); })
+                .on("pointerover", () => { btn.setStyle({ backgroundColor: "#e0bc50" }); btn.setScale(1.05); })
+                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#d4a830" }); btn.setScale(1); })
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
@@ -63,52 +120,50 @@ export class LevelSelect extends Scene implements ChangeableScene {
             return btn;
         };
 
-        // Row 1: Days 1–5  (y=165)
-        makeDayButton(212, 165, "Day 1",  1);
-        makeDayButton(362, 165, "Day 2",  2);
-        makeDayButton(512, 165, "Day 3",  3);
-        makeDayButton(662, 165, "Day 4",  4);
-        makeDayButton(812, 165, "Day 5",  5);
+        dayXPositions.forEach((x, i) => makeDayButton(x, row1Y, `Day ${i + 1}`, i + 1));
+        dayXPositions.forEach((x, i) => makeDayButton(x, row2Y, `Day ${i + 6}`, i + 6));
 
-        // Row 2: Days 6–10 (y=245)
-        makeDayButton(212, 245, "Day 6",  6);
-        makeDayButton(362, 245, "Day 7",  7);
-        makeDayButton(512, 245, "Day 8",  8);
-        makeDayButton(662, 245, "Day 9",  9);
-        makeDayButton(812, 245, "Day 10", 10);
+        // --- Divider ---
+        const dividerY = row2Y + 56;
+        const divGfx = this.add.graphics().setDepth(5);
+        divGfx.lineStyle(1, 0xb5953a, 0.7);
+        divGfx.moveTo(cardX - 300, dividerY);
+        divGfx.lineTo(cardX + 300, dividerY);
+        divGfx.strokePath();
 
-        // Endings divider
         this.add
-            .text(512, 325, "— View Endings —", {
+            .text(cardX, dividerY, "— View Endings —", {
                 fontFamily: "Pix32",
-                fontSize: 22,
-                color: "#7a6840",
+                fontSize: 20,
+                color: "#7a6040",
+                backgroundColor: "#f0e4c4",
+                padding: { left: 10, right: 10, top: 0, bottom: 0 },
                 align: "center",
             })
             .setOrigin(0.5)
-            .setDepth(100);
+            .setDepth(6);
 
-        // Ending buttons: 3 centered on x=512, spacing=200
-        // x positions: 312, 512, 712
+        // --- Ending buttons ---
+        const endingY = dividerY + 54;
         const endingStyle = {
             fontFamily: "Pix32",
-            fontSize: 24,
+            fontSize: 22,
             color: "#f4edd8",
             stroke: "#211d17",
             strokeThickness: 1,
-            backgroundColor: "#8c7b52",
+            backgroundColor: "#5a4a32",
             padding: { left: 20, right: 20, top: 10, bottom: 10 },
             align: "center",
         };
 
         const makeEndingButton = (x: number, label: string, preview: number) => {
             const btn = this.add
-                .text(x, 405, label, endingStyle)
+                .text(x, endingY, label, endingStyle)
                 .setOrigin(0.5)
-                .setDepth(100)
+                .setDepth(10)
                 .setInteractive({ useHandCursor: true })
-                .on("pointerover", () => { btn.setStyle({ backgroundColor: "#a89566" }); btn.setScale(1.03); })
-                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#8c7b52" }); btn.setScale(1); })
+                .on("pointerover", () => { btn.setStyle({ backgroundColor: "#7a6848" }); btn.setScale(1.05); })
+                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#5a4a32" }); btn.setScale(1); })
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
@@ -121,23 +176,24 @@ export class LevelSelect extends Scene implements ChangeableScene {
         makeEndingButton(512, "Ending 2", 2);
         makeEndingButton(712, "Ending 3", 3);
 
-        // Main Menu button centered at bottom
+        // --- Main Menu button ---
+        const btnY = cardY + cardH / 2 - 46;
         const mainMenuButton = this.add
-            .text(512, 515, "Main Menu", {
+            .text(cardX, btnY, "Main Menu", {
                 fontFamily: "Pix32",
-                fontSize: 32,
-                color: "#f8f0dc",
-                stroke: "#211d17",
+                fontSize: 28,
+                color: "#f0e8d4",
+                stroke: "#1a2a1a",
                 strokeThickness: 1,
-                backgroundColor: "#44624c",
-                padding: { left: 30, right: 30, top: 12, bottom: 12 },
+                backgroundColor: "#3a5c42",
+                padding: { left: 28, right: 28, top: 10, bottom: 10 },
                 align: "center",
             })
             .setOrigin(0.5)
-            .setDepth(100)
+            .setDepth(10)
             .setInteractive({ useHandCursor: true })
-            .on("pointerover", () => { mainMenuButton.setStyle({ backgroundColor: "#53755b" }); mainMenuButton.setScale(1.03); })
-            .on("pointerout",  () => { mainMenuButton.setStyle({ backgroundColor: "#44624c" }); mainMenuButton.setScale(1); })
+            .on("pointerover", () => { mainMenuButton.setStyle({ backgroundColor: "#4e7a56" }); mainMenuButton.setScale(1.05); })
+            .on("pointerout",  () => { mainMenuButton.setStyle({ backgroundColor: "#3a5c42" }); mainMenuButton.setScale(1); })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 this.scene.start("MainMenu");
@@ -151,7 +207,6 @@ export class LevelSelect extends Scene implements ChangeableScene {
             this.logoTween.stop();
             this.logoTween = null;
         }
-
         this.scene.start("Tutorial");
     }
 

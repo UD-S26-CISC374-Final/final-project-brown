@@ -10,6 +10,10 @@ export const SOUND_KEYS = {
     emailNoti: "email-noti",
     hey: "hey",
     menuTheme: "menu-theme",
+    carStop: "car-stop",
+    openClose: "open-close",
+    footsteps: "footsteps",
+    doorKnock: "door-knock",
 } as const;
 
 export function ensureLoopingSound(

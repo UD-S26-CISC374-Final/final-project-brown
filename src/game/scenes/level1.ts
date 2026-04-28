@@ -228,7 +228,7 @@ export class Level1 extends Scene {
                 fontSize: "22px",
                 color: "#f4ecd8",
             })
-            .setStyle({ backgroundColor: "#334339" })
+            .setStyle({ backgroundColor: "#213426" })
             .setDepth(11);
         this.countdownTimer = this.time.addEvent({
             delay: 1000,
@@ -341,10 +341,10 @@ export class Level1 extends Scene {
 
     private buildUI() {
         this.add
-            .rectangle(512, 58, 1024, 106, 0x26362c, 0.96)
-            .setStrokeStyle(2, 0xb5a36a)
+            .rectangle(512, 58, 1024, 106, 0x1b3022, 0.97)
+            .setStrokeStyle(2, 0xb5953a)
             .setDepth(10);
-        this.add.rectangle(512, 116, 1024, 6, 0xb5a36a, 0.9).setDepth(10);
+        this.add.rectangle(512, 116, 1024, 4, 0xd4a830, 1).setDepth(10);
 
         this.mainmenuButton = this.createButton(
             780,
@@ -363,7 +363,7 @@ export class Level1 extends Scene {
                 color: "#f4ecd8",
                 fontStyle: "bold",
             })
-            .setStyle({ backgroundColor: "#334339" })
+            .setStyle({ backgroundColor: "#203426" })
             .setDepth(11);
 
         this.scoreText = this.add
@@ -371,7 +371,7 @@ export class Level1 extends Scene {
                 fontSize: "22px",
                 color: "#f4ecd8",
             })
-            .setStyle({ backgroundColor: "#334339" })
+            .setStyle({ backgroundColor: "#203426" })
             .setDepth(11);
 
         this.moneyText = this.add
@@ -391,8 +391,8 @@ export class Level1 extends Scene {
             .setDepth(11);
 
         this.feedbackBar = this.add
-            .rectangle(512, 144, 920, 42, 0xefe4c7, 0.95)
-            .setStrokeStyle(2, 0x5d5747)
+            .rectangle(512, 144, 920, 42, 0xf0e4c4, 0.97)
+            .setStrokeStyle(2, 0x7a6030)
             .setDepth(29);
 
         this.feedbackText = this.add
@@ -409,25 +409,25 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.computerPanelBg = this.add
-            .rectangle(770, 466, 470, 590, 0xefe4c7, 0.97)
-            .setStrokeStyle(3, 0x5d5747)
+            .rectangle(770, 466, 470, 590, 0xf0e4c4, 1)
+            .setStrokeStyle(3, 0x7a6030)
             .setDepth(15)
             .setVisible(false);
 
         this.filesPanelBg = this.add
-            .rectangle(255, 466, 460, 590, 0xefe4c7, 0.97)
-            .setStrokeStyle(3, 0x5d5747)
+            .rectangle(255, 466, 460, 590, 0xf0e4c4, 1)
+            .setStrokeStyle(3, 0x7a6030)
             .setDepth(15)
             .setVisible(false);
 
         this.computerPanelChrome = [
             this.add
-                .rectangle(770, 202, 432, 46, 0x26362c, 1)
-                .setStrokeStyle(2, 0xb5a36a)
+                .rectangle(770, 202, 432, 46, 0x1b3022, 1)
+                .setStrokeStyle(2, 0xb5953a)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(770, 364, 432, 2, 0xb5a36a, 0.62)
+                .rectangle(770, 380, 432, 3, 0xd4a830, 0.9)
                 .setDepth(15)
                 .setVisible(false),
             this.add
@@ -444,12 +444,12 @@ export class Level1 extends Scene {
 
         this.filesPanelChrome = [
             this.add
-                .rectangle(255, 202, 422, 46, 0x26362c, 1)
-                .setStrokeStyle(2, 0xb5a36a)
+                .rectangle(255, 202, 422, 46, 0x1b3022, 1)
+                .setStrokeStyle(2, 0xb5953a)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(255, 266, 422, 2, 0xb5a36a, 0.62)
+                .rectangle(255, 266, 422, 3, 0xd4a830, 0.9)
                 .setDepth(15)
                 .setVisible(false),
             this.add
@@ -655,7 +655,7 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookCoreButton = this.createButton(
-            82,
+            140,
             244,
             "Core",
             "#66563b",
@@ -668,7 +668,7 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookRosterButton = this.createButton(
-            190,
+            248,
             244,
             "Roster",
             "#66563b",
@@ -681,7 +681,7 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookTodayButton = this.createButton(
-            312,
+            370,
             244,
             "Today",
             "#66563b",
@@ -703,7 +703,7 @@ export class Level1 extends Scene {
         ];
         this.companyRuleButtons = companyLabels.map((company, index) =>
             this.createButton(
-                58 + index * 67,
+                88 + index * 67,
                 292,
                 company.button,
                 "#4d5f55",
@@ -726,7 +726,7 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookBodyText = this.add
-            .text(44, 366, "", {
+            .text(51.5, 366, "", {
                 fontSize: "15px",
                 color: "#2a251c",
                 wordWrap: { width: 410 },
@@ -897,13 +897,13 @@ export class Level1 extends Scene {
 
         // Plot dialogue panel — themed box that replaces the distraction bar
         this.plotDialogPanel = this.add
-            .rectangle(512, 643, 740, 116, 0x1a1814)
-            .setStrokeStyle(2, 0xb5a36a)
+            .rectangle(512, 643, 740, 116, 0x1b3022)
+            .setStrokeStyle(2, 0xb5953a)
             .setDepth(28)
             .setVisible(false);
 
         this.plotDialogAccent = this.add
-            .rectangle(512, 588, 740, 4, 0xb5a36a)
+            .rectangle(512, 588, 740, 4, 0xd4a830)
             .setDepth(29)
             .setVisible(false);
 
@@ -1347,7 +1347,10 @@ export class Level1 extends Scene {
             this.dayFinishTimer.remove(false);
         }
 
-        const delay = Math.min(800, Math.max(0, this.feedbackHoldUntilMs - this.time.now));
+        const delay = Math.min(
+            800,
+            Math.max(0, this.feedbackHoldUntilMs - this.time.now),
+        );
         this.dayFinishTimer = this.time.delayedCall(delay, () => {
             this.dayFinishTimer = null;
             this.finishDay();
@@ -1455,10 +1458,18 @@ export class Level1 extends Scene {
     private getHintForEmail(email: EmailCase): string {
         const v = (email.violations[0] ?? "").toLowerCase();
 
-        if (v.includes(".exe") || v.includes(".zip") || v.includes(".pdf") || (v.includes("attachment") && !v.includes("does not match"))) {
+        if (
+            v.includes(".exe") ||
+            v.includes(".zip") ||
+            v.includes(".pdf") ||
+            (v.includes("attachment") && !v.includes("does not match"))
+        ) {
             return "Check what types of attachments are allowed right now.";
         }
-        if (v.includes("attachment does not match") || v.includes("attachment")) {
+        if (
+            v.includes("attachment does not match") ||
+            v.includes("attachment")
+        ) {
             return "Does the attached file actually relate to what the email says?";
         }
         if (v.includes("maps to") || v.includes("username does not match")) {
@@ -1467,7 +1478,10 @@ export class Level1 extends Scene {
         if (v.includes("subject and body") || v.includes("subject/body")) {
             return "Read the subject line and the body — are they about the same thing?";
         }
-        if (v.includes("does not normally send") || v.includes("topic from wrong")) {
+        if (
+            v.includes("does not normally send") ||
+            v.includes("topic from wrong")
+        ) {
             return "Think about what topics this company normally handles.";
         }
         if (v.includes("does not work at")) {
@@ -1479,7 +1493,11 @@ export class Level1 extends Scene {
         if (v.includes("domain") || v.includes("approved")) {
             return "Look carefully at the domain in the sender's address.";
         }
-        if (v.includes("credential") || v.includes("verification") || v.includes("urgent")) {
+        if (
+            v.includes("credential") ||
+            v.includes("verification") ||
+            v.includes("urgent")
+        ) {
             return "Be cautious of emails that pressure you to confirm or verify something.";
         }
         if (v.includes("weather") || v.includes("banned word")) {

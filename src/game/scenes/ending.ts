@@ -1,6 +1,20 @@
 import { Scene } from "phaser";
 import { playOneShot, SOUND_KEYS, stopSound } from "../audio";
 
+const INTRO_SOUND_MAP: Record<string, string> = {
+    "A car arrives outside your house.": SOUND_KEYS.carStop,
+    "A man steps out.": SOUND_KEYS.openClose,
+    "He approaches your front door.": SOUND_KEYS.footsteps,
+    "He knocks. You answer.": SOUND_KEYS.doorKnock,
+};
+
+const INTRO_SOUND_VOLUME: Record<string, number> = {
+    [SOUND_KEYS.carStop]: 0.25,
+    [SOUND_KEYS.openClose]: 0.4,
+    [SOUND_KEYS.footsteps]: 0.4,
+    [SOUND_KEYS.doorKnock]: 0.4,
+};
+
 export interface EndingSceneData {
     endingType: 1 | 2 | 3;
 }
@@ -8,36 +22,37 @@ export interface EndingSceneData {
 const INTRO_SCREENS: string[] = [
     "",
     "A car arrives outside your house.",
-    "A man steps out and walks to your front door.",
+    "A man steps out.",
+    "He approaches your front door.",
     "He knocks. You answer.",
 ];
 
 const ENDING_SCREENS: Record<number, string[]> = {
     1: [
-        "The man at the door is not from the company,\nbut one you recognize.",
+        "The man at the door used to work at Blackline.\nHe is a friend.",
         "He tells you the files you let through\nreached the right people.",
-        "The company's servers are being seized.",
+        "Blackline's servers are being seized.",
         "The infection zones are being exposed.",
         "For once, the emails mattered.",
         "You are a hero,\nbut now an enemy to many.",
     ],
     2: [
-        "A company representative stands at your door.",
+        "A Blackline representative stands at your door.",
         "He thanks you for your excellent work.",
         "Every suspicious message was contained.",
         "The leak has been prevented.",
-        "The company continues operating\nlike nothing happened.",
+        "Blackline continues operating\nlike nothing happened.",
         "You keep your job and stay afloat.",
         "Somewhere, the truth stays buried.",
     ],
     3: [
         "The man at the door already knows your name.",
-        "He says the company noticed your inconsistent reports.",
+        "He says Blackline noticed your inconsistent reports.",
         "Some dangerous emails were blocked.",
         "Some dangerous emails were allowed through.",
         "That made you unpredictable.",
         "The last employee made the same mistake.",
-        "The company called his disappearance a transfer.",
+        "Blackline called his disappearance a transfer.",
         "The man reaches into his coat.",
         "Bang.",
     ],
@@ -50,6 +65,7 @@ export class Ending extends Scene {
     private messageText!: Phaser.GameObjects.Text;
     private continueBtn!: Phaser.GameObjects.Text;
     private imagePlaceholderObjects: Phaser.GameObjects.GameObject[] = [];
+    private currentSound: Phaser.Sound.BaseSound | null = null;
 
     constructor() {
         super("Ending");
@@ -124,12 +140,18 @@ export class Ending extends Scene {
     };
 
     private showScreen(index: number) {
+        if (this.currentSound?.isPlaying) {
+            this.currentSound.stop();
+        }
+        this.currentSound = null;
+
         for (const obj of this.imagePlaceholderObjects) obj.destroy();
         this.imagePlaceholderObjects = [];
 
         const text = this.screens[index] ?? "";
         const isFirst = index === 0;
         const isLast = index === this.screens.length - 1;
+        const soundKey = INTRO_SOUND_MAP[text] ?? null;
 
         this.messageText
             .setY(isLast ? 460 : 340)
@@ -170,7 +192,16 @@ export class Ending extends Scene {
                 alpha: 1,
                 duration: 400,
                 onComplete: () => {
-                    this.continueBtn.setInteractive({ useHandCursor: true });
+                    if (soundKey) {
+                        this.currentSound = this.sound.add(soundKey, { volume: INTRO_SOUND_VOLUME[soundKey] ?? 0.25 });
+                        this.currentSound.once("complete", () => {
+                            this.currentSound = null;
+                            this.continueBtn.setInteractive({ useHandCursor: true });
+                        });
+                        this.currentSound.play();
+                    } else {
+                        this.continueBtn.setInteractive({ useHandCursor: true });
+                    }
                 },
             });
         });

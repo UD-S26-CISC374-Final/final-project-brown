@@ -1,6 +1,14 @@
 import { Scene } from "phaser";
 
-import { ensureLoopingSound, playOneShot, SOUND_KEYS, stopSound } from "../audio";
+import {
+    ensureLoopingSound,
+    playOneShot,
+    SOUND_KEYS,
+    stopSound,
+} from "../audio";
+
+const W = 1024;
+const H = 768;
 
 interface TutorialPage {
     title: string;
@@ -71,60 +79,96 @@ export class Tutorial extends Scene {
     create() {
         ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
 
-        this.cameras.main.setBackgroundColor(0x20251f);
-
+        // --- Background ---
         if (this.textures.exists("desk-background")) {
             this.add
-                .image(512, 384, "desk-background")
-                .setDisplaySize(1024, 768)
-                .setAlpha(0.34)
-                .setDepth(-4);
+                .image(W / 2, H / 2, "desk-background")
+                .setDisplaySize(W, H)
+                .setDepth(0);
+        } else {
+            this.cameras.main.setBackgroundColor(0x1a2018);
         }
+        this.add.rectangle(W / 2, H / 2, W, H, 0x090d09, 0.72).setDepth(1);
 
-        this.add.rectangle(512, 58, 1024, 116, 0x26362c, 0.96).setDepth(1);
-        this.add.rectangle(512, 121, 1024, 6, 0xb5a36a, 0.9).setDepth(1);
-        this.add.rectangle(512, 438, 920, 540, 0xefe4c7, 0.97)
-            .setStrokeStyle(3, 0x5d5747)
-            .setDepth(2);
+        // --- Top header bar ---
+        this.add.rectangle(W / 2, 58, W, 116, 0x1b3022, 0.97).setDepth(2);
+        this.add.rectangle(W / 2, 121, W, 3, 0xd4a830, 1).setDepth(2);
 
         this.accentText = this.add
-            .text(74, 40, "", {
+            .text(72, 34, "", {
                 fontFamily: "Pix32",
-                fontSize: "18px",
-                color: "#e2d39e",
+                fontSize: "17px",
+                color: "#d4a830",
             })
-            .setDepth(3);
+            .setDepth(4);
 
         this.titleText = this.add
-            .text(74, 70, "", {
+            .text(72, 62, "", {
                 fontFamily: "Pix32",
                 fontSize: "40px",
-                color: "#f4ecd8",
-                stroke: "#111510",
+                color: "#f2e8d0",
+                stroke: "#0d180d",
                 strokeThickness: 2,
             })
-            .setDepth(3);
+            .setDepth(4);
 
         this.pageText = this.add
-            .text(874, 76, "", {
+            .text(W - 72, 76, "", {
                 fontFamily: "Pix32",
                 fontSize: "18px",
-                color: "#f4ecd8",
+                color: "#b5953a",
+                align: "right",
             })
+            .setOrigin(1, 0.5)
+            .setDepth(4);
+
+        // --- Main content card ---
+        const cardX = W / 2;
+        const cardY = 440;
+        const cardW = 920;
+        const cardH = 540;
+
+        this.add
+            .rectangle(cardX + 6, cardY + 6, cardW, cardH, 0x000000, 0.4)
+            .setDepth(2);
+        this.add
+            .rectangle(cardX, cardY, cardW, cardH, 0xf0e4c4, 0.97)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(3);
+        this.add
+            .rectangle(cardX, cardY, cardW - 16, cardH - 16, 0x000000, 0)
+            .setStrokeStyle(1, 0xb5953a)
             .setDepth(3);
 
+        // Ruled lines
+        const gfx = this.add.graphics().setDepth(3);
+        gfx.lineStyle(1, 0xc8a96e, 0.3);
+        const lineTop = cardY - cardH / 2 + 22;
+        for (let i = 0; i < 14; i++) {
+            gfx.moveTo(cardX - cardW / 2 + 28, lineTop + i * 37);
+            gfx.lineTo(cardX + cardW / 2 - 28, lineTop + i * 37);
+        }
+        gfx.strokePath();
+
+        // Red margin line
+        gfx.lineStyle(1, 0xc06050, 0.4);
+        gfx.moveTo(cardX - cardW / 2 + 68, lineTop);
+        gfx.lineTo(cardX - cardW / 2 + 68, cardY + cardH / 2 - 16);
+        gfx.strokePath();
+
+        // --- Body text ---
         this.bodyText = this.add
-            .text(92, 182, "", {
+            .text(90, 202, "", {
                 fontFamily: "Pix32",
-                fontSize: "24px",
+                fontSize: "22px",
                 color: "#2c271f",
                 wordWrap: { width: 840 },
                 lineSpacing: 10,
             })
-            .setDepth(3);
+            .setDepth(5);
 
         this.statusText = this.add
-            .text(512, 626, "", {
+            .text(W / 2, 623, "", {
                 fontFamily: "Pix32",
                 fontSize: "20px",
                 color: "#5a4a32",
@@ -132,19 +176,20 @@ export class Tutorial extends Scene {
                 wordWrap: { width: 820 },
             })
             .setOrigin(0.5)
-            .setDepth(4);
+            .setDepth(5);
 
-        this.previousButton = this.createButton(196, 704, "< Back", () => {
-            this.showPreviousPage();
-        });
-        this.nextButton = this.createButton(828, 704, "Next >", () => {
-            this.showNextPage();
-        });
-        this.beginButton = this.createButton(512, 704, "Begin Shift", () => {
+        // --- Buttons ---
+        this.previousButton = this.createButton(196, 710, "< Back", () =>
+            this.showPreviousPage(),
+        );
+        this.nextButton = this.createButton(828, 710, "Next >", () =>
+            this.showNextPage(),
+        );
+        this.beginButton = this.createButton(W / 2, 710, "Begin Shift", () => {
             stopSound(this, SOUND_KEYS.menuTheme);
             this.scene.start("Level1", { day: 1 });
         });
-        this.mainMenuButton = this.createButton(196, 704, "Main Menu", () => {
+        this.mainMenuButton = this.createButton(196, 710, "Main Menu", () => {
             this.scene.start("MainMenu");
         });
 
@@ -163,8 +208,10 @@ export class Tutorial extends Scene {
             .text(x, y, label, {
                 fontFamily: "Pix32",
                 fontSize: "22px",
-                color: "#f8f0dc",
-                backgroundColor: "#44624c",
+                color: "#f0e8d4",
+                stroke: "#1a2a1a",
+                strokeThickness: 1,
+                backgroundColor: "#3a5c42",
                 padding: { left: 18, right: 18, top: 10, bottom: 10 },
                 align: "center",
                 fixedWidth: width,
@@ -173,16 +220,18 @@ export class Tutorial extends Scene {
             .setDepth(6)
             .setInteractive({ useHandCursor: true })
             .on("pointerover", () => {
-                button.setStyle({ backgroundColor: "#53755b" });
+                button.setStyle({ backgroundColor: "#4e7a56" });
+                button.setScale(1.05);
             })
             .on("pointerout", () => {
-                button.setStyle({ backgroundColor: "#44624c" });
+                button.setStyle({ backgroundColor: "#3a5c42" });
+                button.setScale(1);
             })
             .on("pointerdown", () => {
-                if (!silent) playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                if (!silent)
+                    playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 callback();
             });
-
         return button;
     }
 
@@ -199,7 +248,9 @@ export class Tutorial extends Scene {
         this.accentText.setText(page.accent);
         this.titleText.setText(page.title);
         this.bodyText.setText(page.body);
-        this.pageText.setText(`${this.pageIndex + 1}/${this.pages.length + 1}`);
+        this.pageText.setText(
+            `${this.pageIndex + 1} / ${this.pages.length + 1}`,
+        );
         this.statusText.setText("");
 
         this.previousButton.setVisible(this.pageIndex > 0);
@@ -211,23 +262,21 @@ export class Tutorial extends Scene {
     private showPreviousPage() {
         this.showPage(this.pageIndex - 1);
     }
-
     private showNextPage() {
         this.showPage(this.pageIndex + 1);
     }
 
     private clearPractice() {
-        for (const item of this.practiceGroup) {
-            item.destroy();
-        }
-
+        for (const item of this.practiceGroup) item.destroy();
         this.practiceGroup = [];
     }
 
     private showPractice() {
         this.accentText.setText("PRACTICE CASE");
         this.titleText.setText("Make One Call");
-        this.pageText.setText(`${this.pages.length + 1}/${this.pages.length + 1}`);
+        this.pageText.setText(
+            `${this.pages.length + 1} / ${this.pages.length + 1}`,
+        );
         this.bodyText.setText(
             "Use the rulebook clue and classify the sample email before your first real shift.",
         );
@@ -238,33 +287,53 @@ export class Tutorial extends Scene {
         this.beginButton.setVisible(this.practiceSolved);
 
         const rulebook = this.add
-            .text(92, 256, "RULEBOOK EXCERPT\n\nRedForge expected topics:\n- MFA, VPN, and account security\n- Incident response, SOC, and escalation\n- Firewalls, endpoint security, and threat hunting", {
-                fontFamily: "Pix32",
-                fontSize: "18px",
-                color: "#2c271f",
-                backgroundColor: "#e2d39e",
-                padding: { left: 14, right: 14, top: 12, bottom: 12 },
-                wordWrap: { width: 380 },
-            })
-            .setDepth(4);
+            .text(
+                92,
+                256,
+                "RULEBOOK EXCERPT\n\nRedForge expected topics:\n- MFA, VPN, and account security\n- Incident response, SOC, and escalation\n- Firewalls, endpoint security, and threat hunting",
+                {
+                    fontFamily: "Pix32",
+                    fontSize: "18px",
+                    color: "#2c271f",
+                    backgroundColor: "#e8d9a8",
+                    padding: { left: 14, right: 14, top: 12, bottom: 12 },
+                    wordWrap: { width: 380 },
+                },
+            )
+            .setDepth(6);
 
         const email = this.add
-            .text(548, 256, "EMAIL\n\nFrom: John Smith\nAddress: john@redforge.com\nSubject: Payroll Adjustment Needed\nAttachments: none\n\nBody:\nPlease review the payroll change form before Friday.", {
-                fontFamily: "Pix32",
-                fontSize: "18px",
-                color: "#2c271f",
-                backgroundColor: "#f6edda",
-                padding: { left: 14, right: 14, top: 12, bottom: 12 },
-                wordWrap: { width: 374 },
-            })
-            .setDepth(4);
+            .text(
+                548,
+                256,
+                "EMAIL\n\nFrom: John Smith\nAddress: john@redforge.com\nSubject: Payroll Adjustment Needed\nAttachments: none\n\nBody:\nPlease review the payroll change form before Friday.",
+                {
+                    fontFamily: "Pix32",
+                    fontSize: "18px",
+                    color: "#2c271f",
+                    backgroundColor: "#f6edda",
+                    padding: { left: 14, right: 14, top: 12, bottom: 12 },
+                    wordWrap: { width: 374 },
+                },
+            )
+            .setDepth(6);
 
-        const validButton = this.createButton(396, 560, "Valid", () => {
-            this.answerPractice(false);
-        }, 164, true);
-        const phishingButton = this.createButton(628, 560, "Phishing", () => {
-            this.answerPractice(true);
-        }, 164, true);
+        const validButton = this.createButton(
+            396,
+            560,
+            "Valid",
+            () => this.answerPractice(false),
+            164,
+            true,
+        );
+        const phishingButton = this.createButton(
+            628,
+            560,
+            "Phishing",
+            () => this.answerPractice(true),
+            164,
+            true,
+        );
 
         this.practiceGroup.push(rulebook, email, validButton, phishingButton);
     }
@@ -275,7 +344,7 @@ export class Tutorial extends Scene {
             playOneShot(this, SOUND_KEYS.correctDing, { volume: 0.5 });
             this.statusText
                 .setText(
-                    "Correct. The sender and domain are real, but payroll is not a RedForge topic. That makes it phishing.",
+                    "Correct. Payroll is not a RedForge topic. That makes it phishing.",
                 )
                 .setColor("#1f5c35");
             this.beginButton.setVisible(true);
@@ -285,7 +354,7 @@ export class Tutorial extends Scene {
         playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
         this.statusText
             .setText(
-                "Not quite. A clean domain is not enough. RedForge does security work, not payroll, so this topic breaks the rulebook.",
+                "Not quite. RedForge does security work, not payroll, so this topic breaks the rulebook.",
             )
             .setColor("#7a2d25");
     }

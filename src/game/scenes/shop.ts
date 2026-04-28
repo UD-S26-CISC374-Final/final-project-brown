@@ -64,15 +64,16 @@ export class Shop extends Scene {
     }
 
     create() {
-        this.cameras.main.setBackgroundColor(0x74736d);
+        this.cameras.main.setBackgroundColor(0x1a2018);
 
-        this.add.rectangle(512, 384, 1024, 768, 0x74736d, 1);
+        this.add.rectangle(512, 384, 1024, 768, 0x090d09, 0.72);
         this.add
-            .rectangle(512, 392, 700, 590, 0xefe4c7, 0.97)
-            .setStrokeStyle(4, 0x5d5747);
+            .rectangle(512, 392, 700, 590, 0xf0e4c4, 0.97)
+            .setStrokeStyle(3, 0x7a6030);
         this.add
-            .rectangle(512, 148, 700, 74, 0x2f3f34, 1)
-            .setStrokeStyle(2, 0xb5a36a);
+            .rectangle(512, 148, 700, 74, 0x1b3022, 1)
+            .setStrokeStyle(2, 0xb5953a);
+        this.add.rectangle(512, 186, 700, 3, 0xd4a830, 1);
 
         this.add
             .text(512, 148, `Supply Window - Day ${this.day}`, {
@@ -155,8 +156,8 @@ export class Shop extends Scene {
         });
 
         this.add
-            .rectangle(512, 666, 650, 160, 0xf5edd7, 0.97)
-            .setStrokeStyle(2, 0x8a784d);
+            .rectangle(512, 666, 650, 160, 0xe8d9a8, 0.97)
+            .setStrokeStyle(2, 0xb5953a);
 
         this.statusText = this.add
             .text(512, 666, "", {
