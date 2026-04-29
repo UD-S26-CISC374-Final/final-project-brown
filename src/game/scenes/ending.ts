@@ -117,6 +117,7 @@ export class Ending extends Scene {
             this.continueBtn.setStyle({ backgroundColor: "#44624c" });
         });
         this.continueBtn.on("pointerdown", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
             this.continueBtn.disableInteractive();
             this.cameras.main.fadeOut(400, 0, 0, 0);
         });
