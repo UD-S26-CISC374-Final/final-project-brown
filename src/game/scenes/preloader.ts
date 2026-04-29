@@ -15,7 +15,14 @@ import mouseClickAudio from "../sounds/mouseclick.wav";
 import pageTurnAudio from "../sounds/pageturn.wav";
 import textBoxImage from "../objects/TextBox.png";
 import wrongBuzzerAudio from "../sounds/wrongbuzzer.wav";
+import zombieImage from "../objects/Zombie.png";
+import gunDoorClosed from "../objects/GunDoorClosed.png"
+import gunDoorOpen from "../objects/GunDoorOpen.png"
+import gunTaken from "../objects/GunTaken.png"
+import crosshair from "../objects/Crosshair.png"
 import { SOUND_KEYS } from "../audio";
+
+
 
 export class Preloader extends Scene {
     constructor() {
@@ -58,6 +65,11 @@ export class Preloader extends Scene {
         this.load.image("desk-files", filesImage);
         this.load.image("desk-files-hover", filesHoverImage);
         this.load.image("desk-textbox", textBoxImage);
+        this.load.image("zombie", zombieImage);
+        this.load.image("gun-door-closed", gunDoorClosed);
+        this.load.image("gun-door-open", gunDoorOpen);
+        this.load.image("gun-taken", gunTaken);
+        this.load.image("crosshair", crosshair);
 
         this.load.audio(SOUND_KEYS.fanAudio, fanAudio);
         this.load.audio(SOUND_KEYS.dudeNoise, dudeNoiseAudio);

@@ -72,6 +72,8 @@ export class Level1 extends Scene {
     private rulebookPages: RulebookPage[] = [];
     private rulebookPageIndex = 0;
 
+    //private debugGraphics!: Phaser.GameObjects.Graphics;
+
     private deskBackgroundImage!: Phaser.GameObjects.Image;
     private computerObject!: Phaser.GameObjects.Image;
     private filesObject!: Phaser.GameObjects.Image;
@@ -137,6 +139,33 @@ export class Level1 extends Scene {
     private interruptBarBg!: Phaser.GameObjects.Rectangle;
     private interruptBarFill!: Phaser.GameObjects.Rectangle;
     private interruptText!: Phaser.GameObjects.Text;
+
+    private zombieSprite!: Phaser.GameObjects.Image;
+    private gunDoorClosedSprite!: Phaser.GameObjects.Image;
+    private gunDoorOpenSprite!: Phaser.GameObjects.Image;
+    private gunTakenSprite!: Phaser.GameObjects.Image;
+    private gunDoorPanelZone!: Phaser.GameObjects.Zone;
+    private gunZone!: Phaser.GameObjects.Zone;
+    private crosshair!: Phaser.GameObjects.Image;
+    private crosshairZone!: Phaser.GameObjects.Zone;
+    private zombieZone!: Phaser.GameObjects.Zone;
+
+    private panel!: Phaser.GameObjects.Rectangle;
+    private panelDisplay!: Phaser.GameObjects.Text;
+    private button1!: Phaser.GameObjects.Text;
+    private button2!: Phaser.GameObjects.Text;
+    private button3!: Phaser.GameObjects.Text;
+    private button4!: Phaser.GameObjects.Text;
+    private button5!: Phaser.GameObjects.Text;
+    private button6!: Phaser.GameObjects.Text;
+    private button7!: Phaser.GameObjects.Text;
+    private button8!: Phaser.GameObjects.Text;
+    private button9!: Phaser.GameObjects.Text;
+    private buttonEnter!: Phaser.GameObjects.Text;
+    private buttonBackspace!: Phaser.GameObjects.Text;
+    private inputPassword = "";
+    private todaysPassword = "";
+    private passwordCorrect = 0;
 
     //timer setup
     private timerValue = 300;
@@ -229,7 +258,6 @@ export class Level1 extends Scene {
             this.textures.exists("desk-computer") ? "desk-computer" : "logo";
         const filesBaseKey =
             this.textures.exists("desk-files") ? "desk-files" : "logo";
-
         this.computerObject = this.add
             .image(512, 384, computerBaseKey)
             .setDisplaySize(1024, 768)
@@ -306,6 +334,11 @@ export class Level1 extends Scene {
     }
 
     private buildUI() {
+        for (let i = 0; i < 4; i++) {
+            this.todaysPassword += Phaser.Math.Between(2, 9).toString();
+            console.log(this.todaysPassword);
+        }
+
         this.add
             .rectangle(512, 58, 1024, 106, 0x26362c, 0.96)
             .setStrokeStyle(2, 0xb5a36a)
@@ -834,18 +867,125 @@ export class Level1 extends Scene {
             .setDisplaySize(1024, 768)
             .setDepth(25)
             .setVisible(false);
+        
+        this.zombieSprite = this.add
+            .image(512, 384, "zombie")
+            .setDisplaySize(1024, 768)
+            .setDepth(25)
+            .setVisible(false);
+        this.gunDoorClosedSprite = this.add
+            .image(-250, 540, "gun-door-closed")
+            .setDisplaySize(1024, 768)
+            .setDepth(50)
+            .setVisible(false);
+        this.gunDoorOpenSprite = this.add
+            .image(512, 384, "gun-door-open")
+            .setDisplaySize(1024, 768)
+            .setDepth(50)
+            .setVisible(false);
+        this.gunTakenSprite = this.add
+            .image(512, 384, "gun-taken")
+            .setDisplaySize(1024, 768)
+            .setDepth(50)
+            .setVisible(false);
+        this.gunDoorPanelZone = this.add
+            .zone(512, 384, 1024, 768)
+            .setDepth(50)
+            .setVisible(false);
+        this.gunZone = this.add
+            .zone(512, 384, 1024, 768)
+            .setDepth(50)
+            .setVisible(false);
+        this.crosshair = this.add
+            .image(512, 384, "crosshair")
+            .setDepth(50)
+            .setVisible(false);
+        this.crosshairZone = this.add
+            .zone(512, 384, 32, 32)
+            .setDepth(50)
+            .setVisible(false);
+        this.zombieZone = this.add
+            .zone(250, 250, 250, 250)
+            .setDepth(50)
+            .setVisible(false);
+
+        /*
+        this.panel = this.add
+            .rectangle(512, 348, 500, 500, 0xADA17F)
+            .setStrokeStyle(2, 0xffffff)
+            .setDepth(26)
+            .setVisible(false)
+            .setAlpha(.8);
+        
+        this.button1 = this.createButton(512,500,"1","#4d5f55",() => {this.inputPassword += "1";},50,).setDepth(27).setVisible(false);
+        this.button2 = this.createButton(512,550,"2","#4d5f55",() => {this.inputPassword += "2";},50,).setDepth(27).setVisible(false);
+        this.button3 = this.createButton(512,600,"3","#4d5f55",() => {this.inputPassword += "3";},50,).setDepth(27).setVisible(false);
+        this.button4 = this.createButton(562,500,"4","#4d5f55",() => {this.inputPassword += "4";},50,).setDepth(27).setVisible(false);
+        this.button5 = this.createButton(562,550,"5","#4d5f55",() => {this.inputPassword += "5";},50,).setDepth(27).setVisible(false);
+        this.button6 = this.createButton(562,600,"6","#4d5f55",() => {this.inputPassword += "6";},50,).setDepth(27).setVisible(false);
+        this.button7 = this.createButton(612,500,"7","#4d5f55",() => {this.inputPassword += "7";},50,).setDepth(27).setVisible(false);
+        this.button8 = this.createButton(612,550,"8","#4d5f55",() => {this.inputPassword += "8";},50,).setDepth(27).setVisible(false);
+        this.button9 = this.createButton(612,600,"9","#4d5f55",() => {this.inputPassword += "9";},50,).setDepth(27).setVisible(false);
+
+        this.buttonEnter = this.createButton(462,500,"Enter","#4d5f55",() => {this.checkPassword();},70,).setDepth(27).setVisible(false);
+        this.buttonBackspace = this.createButton(462,550,"Backspace","#4d5f55",() => {this.inputPassword = this.inputPassword.slice(0, -1);},70,).setDepth(27).setVisible(false);
+        */
+
+        const centerX = 512;
+        const centerY = 348;
+
+        this.panel = this.add
+            .rectangle(centerX, centerY, 240, 280, 0xD8CFAF)
+            .setStrokeStyle(2, 0x6E644A)
+            .setDepth(26)
+            .setVisible(false)
+            .setAlpha(0.95);
+
+        const startX = centerX - 50; // left column
+        const startY = centerY - 40; // top row
+        const spacing = 50;
+
+        this.button1 = this.createButton(startX, startY, "1", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "1"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+        this.button2 = this.createButton(startX + spacing, startY, "2", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "2"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+        this.button3 = this.createButton(startX + spacing * 2, startY, "3", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "3"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+
+        this.button4 = this.createButton(startX, startY + spacing, "4", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "4"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+        this.button5 = this.createButton(startX + spacing, startY + spacing, "5", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "5"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+        this.button6 = this.createButton(startX + spacing * 2, startY + spacing, "6", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "6"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+
+        this.button7 = this.createButton(startX, startY + spacing * 2, "7", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "7"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+        this.button8 = this.createButton(startX + spacing, startY + spacing * 2, "8", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "8"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+        this.button9 = this.createButton(startX + spacing * 2, startY + spacing * 2, "9", "#4E6A57", () => { if (this.inputPassword.length < 4) { this.inputPassword += "9"; this.panelDisplay.setText(this.inputPassword); } }, 40).setDepth(27).setVisible(false);
+
+        this.buttonEnter = this.createButton(startX, startY + spacing * 3, "Enter", "#4E6A57", () => { this.checkPassword(); }, 70).setDepth(27).setVisible(false);
+        this.buttonBackspace = this.createButton(startX + spacing * 2, startY + spacing * 3, "Delete", "#4E6A57", () => { this.inputPassword = this.inputPassword.slice(0, -1); this.panelDisplay.setText(this.inputPassword);}, 70).setDepth(27).setVisible(false);
+
+        this.panelDisplay = this.add
+            .text(centerX, startY - spacing, this.inputPassword, {
+                fontFamily: "Pix32",
+                fontSize: "16px",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#4E6A57",
+                fixedWidth: 200,
+                align: "center",
+                padding: { left: 8, right: 8, top: 10, bottom: 10 },
+            })
+            .setOrigin(0.5)
+            .setDepth(27)
+            .setVisible(false);
+
 
         this.interruptBarBg = this.add
             .rectangle(512, 640, 700, 36, 0x2a2a2a)
             .setStrokeStyle(2, 0xffffff)
             .setDepth(26)
             .setVisible(false);
-
         this.interruptBarFill = this.add
             .rectangle(512, 640, 700, 30, 0x7a1f1f)
             .setDepth(27)
             .setVisible(false);
-
         this.interruptText = this.add
             .text(512, 640, "Ignore conversation", {
                 fontFamily: "Pix32",
@@ -1026,9 +1166,12 @@ export class Level1 extends Scene {
                 if (!this.triageVisible || this.interruptActive) {
                     return;
                 }
-
-                if (Phaser.Math.FloatBetween(0, 1) <= 1 / 12) {
+                const f = Phaser.Math.FloatBetween(0, 1);
+                console.log(f);
+                if (f <= .1 && f >= .01) {
                     this.startInterrupt();
+                } else if (f < .01) {
+                    this.startInterruptZombie();
                 }
             },
         });
@@ -1074,6 +1217,117 @@ export class Level1 extends Scene {
         });
     }
 
+    private checkPassword() {
+        if (this.inputPassword === this.todaysPassword) {
+            this.inputPassword = "";
+            this.panelDisplay.setVisible(false);
+            this.panel.setVisible(false);
+            this.button1.setVisible(false);
+            this.button2.setVisible(false);
+            this.button3.setVisible(false);
+            this.button4.setVisible(false);
+            this.button5.setVisible(false);
+            this.button6.setVisible(false);
+            this.button7.setVisible(false);
+            this.button8.setVisible(false);
+            this.button9.setVisible(false);
+            this.buttonEnter.setVisible(false);
+            this.buttonBackspace.setVisible(false);
+            this.passwordCorrect = 1;
+        }
+    }
+
+    private startInterruptZombie() {
+        console.log("Starting zombie interrupt");
+        if (!this.triageVisible || this.interruptActive) {
+            return;
+        }
+        console.log("Starting zombie interrupt2");
+
+        this.interruptActive = true;
+        //ensureLoopingSound(this, SOUND_KEYS.zombieNoise, { volume: 0.32 });
+
+        this.zombieSprite.setVisible(true);
+        this.gunDoorClosedSprite.setVisible(true);
+        this.gunDoorClosedSprite.setPosition(512, 384);
+        this.computerPanelOpen = false;
+        this.filesPanelOpen = false;
+        this.updatePanelVisibility();
+        this.gunDoorPanelZone.setVisible(true).setPosition(512, 384).setInteractive();
+        this.gunDoorPanelZone.on('pointerdown', () => {
+            console.log("Gun door panel clicked");
+            this.gunDoorPanelZone.disableInteractive();
+            this.panelDisplay.setVisible(true);
+            this.panel.setVisible(true);
+            this.button1.setVisible(true);
+            this.button2.setVisible(true);
+            this.button3.setVisible(true);
+            this.button4.setVisible(true);
+            this.button5.setVisible(true);
+            this.button6.setVisible(true);
+            this.button7.setVisible(true);
+            this.button8.setVisible(true);
+            this.button9.setVisible(true);
+            this.buttonEnter.setVisible(true);
+            this.buttonBackspace.setVisible(true);
+        });
+
+        let timeRemaining = 15;
+        const timerText = this.add.text(512, 30, `Time: ${timeRemaining}s`, {
+            fontSize: '24px',
+            color: '#ff0000',
+        }).setOrigin(0.5).setDepth(100);
+
+        const countdownTimer = this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => {
+                if (!this.interruptActive) {
+                    countdownTimer.remove();
+                    timerText.destroy();
+                    return;
+                }
+                timeRemaining--;
+                timerText.setText(`Time: ${timeRemaining}s`);
+                if (timeRemaining <= 0) {
+                    countdownTimer.remove();
+                    timerText.destroy();
+                    this.scene.start('MainMenu')
+                }
+            }
+        });
+        this.interruptTick = this.time.addEvent({
+            delay: 120,
+            loop: true,
+            callback: () => {
+                if (!this.interruptActive) {
+                    return;
+                }
+                if (this.passwordCorrect === 1) {
+                    this.passwordCorrect = 0;
+                    this.gunDoorClosedSprite.setVisible(false);
+                    this.gunDoorOpenSprite.setVisible(true);
+                    this.gunZone.setVisible(true).setInteractive();
+                    this.gunZone.on('pointerdown', () => {
+                        this.gunZone.disableInteractive();
+                        this.gunDoorOpenSprite.setVisible(false);
+                        this.gunZone.setVisible(false);
+                        this.gunTakenSprite.setVisible(true);
+                        this.crosshair.setVisible(true);
+                        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+                            this.crosshair.setPosition(pointer.worldX, pointer.worldY);
+                        })
+                        this.zombieZone.setVisible(true).setInteractive();
+                        this.zombieZone.on('pointerdown', () => {
+                            this.zombieZone.disableInteractive();
+                            this.endInterruptZombie();
+                        });
+                    });
+                }
+            },
+        });
+    }
+
     private refreshInterruptBar() {
         const maxWidth = 700;
         const width = Math.max(6, maxWidth * this.interruptProgress);
@@ -1092,6 +1346,17 @@ export class Level1 extends Scene {
             this.interruptTick.remove(false);
             this.interruptTick = null;
         }
+    }
+
+    private endInterruptZombie() {
+        this.interruptActive = false;
+        //stopSound(this, SOUND_KEYS.zombieNoise);
+        this.zombieSprite.setVisible(false);
+        this.gunDoorClosedSprite.setVisible(false);
+        this.gunDoorPanelZone.setVisible(false);
+        this.zombieZone.setVisible(false);
+        this.gunTakenSprite.setVisible(false);
+        this.crosshair.setVisible(false);
     }
 
     private clearInterrupt() {
