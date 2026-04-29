@@ -147,7 +147,7 @@ export class Level1 extends Scene {
     private gunDoorPanelZone!: Phaser.GameObjects.Zone;
     private gunZone!: Phaser.GameObjects.Zone;
     private crosshair!: Phaser.GameObjects.Image;
-    private crosshairZone!: Phaser.GameObjects.Zone;
+    //private crosshairZone!: Phaser.GameObjects.Zone;
     private zombieZone!: Phaser.GameObjects.Zone;
 
     private panel!: Phaser.GameObjects.Rectangle;
@@ -900,10 +900,12 @@ export class Level1 extends Scene {
             .image(512, 384, "crosshair")
             .setDepth(50)
             .setVisible(false);
+        /*
         this.crosshairZone = this.add
             .zone(512, 384, 32, 32)
             .setDepth(50)
             .setVisible(false);
+        */
         this.zombieZone = this.add
             .zone(250, 250, 250, 250)
             .setDepth(50)
