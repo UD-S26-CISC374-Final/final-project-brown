@@ -344,7 +344,10 @@ export class Level1 extends Scene {
             .setStrokeStyle(2, 0xb5a36a)
             .setDepth(10);
         this.add.rectangle(512, 116, 1024, 6, 0xb5a36a, 0.9).setDepth(10);
-
+        this.add.text(700, 20, "Today's Password: " + this.todaysPassword, {
+            fontSize: "20px",
+            color: "#f4ecd8",
+        }).setDepth(10);
         this.mainmenuButton = this.createButton(
             780,
             70,
@@ -404,7 +407,7 @@ export class Level1 extends Scene {
 
         this.endScreenBg = this.add
             .rectangle(512, 384, 1024, 768, 0x30342b, 0.96)
-            .setDepth(18)
+            .setDepth(50)
             .setVisible(false);
 
         this.computerPanelBg = this.add
@@ -799,7 +802,7 @@ export class Level1 extends Scene {
                 align: "center",
             })
             .setOrigin(0.5)
-            .setDepth(20)
+            .setDepth(51)
             .setVisible(false);
 
         this.finalSummary = this.add
@@ -811,7 +814,7 @@ export class Level1 extends Scene {
                 lineSpacing: 8,
             })
             .setOrigin(0.5)
-            .setDepth(20)
+            .setDepth(51)
             .setVisible(false);
 
         this.restartButton = this.createButton(
@@ -833,7 +836,7 @@ export class Level1 extends Scene {
             },
             240,
         )
-            .setDepth(20)
+            .setDepth(51)
             .setVisible(false);
         this.mainmenuButton = this.createButton(
             512,
@@ -845,7 +848,7 @@ export class Level1 extends Scene {
             },
             240,
         )
-            .setDepth(20)
+            .setDepth(51)
             .setVisible(false);
         this.selectButton = this.createButton(
             512,
@@ -857,7 +860,7 @@ export class Level1 extends Scene {
             },
             240,
         )
-            .setDepth(20)
+            .setDepth(51)
             .setVisible(false);
     }
 
@@ -876,39 +879,39 @@ export class Level1 extends Scene {
         this.gunDoorClosedSprite = this.add
             .image(-250, 540, "gun-door-closed")
             .setDisplaySize(1024, 768)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         this.gunDoorOpenSprite = this.add
             .image(512, 384, "gun-door-open")
             .setDisplaySize(1024, 768)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         this.gunTakenSprite = this.add
             .image(512, 384, "gun-taken")
             .setDisplaySize(1024, 768)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         this.gunDoorPanelZone = this.add
             .zone(512, 384, 1024, 768)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         this.gunZone = this.add
             .zone(512, 384, 1024, 768)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         this.crosshair = this.add
             .image(512, 384, "crosshair")
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         /*
         this.crosshairZone = this.add
             .zone(512, 384, 32, 32)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
         */
         this.zombieZone = this.add
             .zone(250, 250, 250, 250)
-            .setDepth(50)
+            .setDepth(49)
             .setVisible(false);
 
         /*
@@ -1170,9 +1173,9 @@ export class Level1 extends Scene {
                 }
                 const f = Phaser.Math.FloatBetween(0, 1);
                 console.log(f);
-                if (f <= .1 && f >= .01) {
+                if (f <= .125 && f >= .025) {
                     this.startInterrupt();
-                } else if (f < .01) {
+                } else if (f < .025) {
                     this.startInterruptZombie();
                 }
             },
@@ -1220,6 +1223,7 @@ export class Level1 extends Scene {
     }
 
     private checkPassword() {
+        console.log(this.inputPassword + ' -> ' + this.todaysPassword);
         if (this.inputPassword === this.todaysPassword) {
             this.inputPassword = "";
             this.panelDisplay.setVisible(false);
@@ -1274,7 +1278,7 @@ export class Level1 extends Scene {
             this.buttonBackspace.setVisible(true);
         });
 
-        let timeRemaining = 15;
+        let timeRemaining = 20;
         const timerText = this.add.text(512, 30, `Time: ${timeRemaining}s`, {
             fontSize: '24px',
             color: '#ff0000',
@@ -1294,7 +1298,9 @@ export class Level1 extends Scene {
                 if (timeRemaining <= 0) {
                     countdownTimer.remove();
                     timerText.destroy();
-                    this.scene.start('MainMenu')
+                    const message = "You have been Infected!";
+                    this.finalSummary.setText(`${message}\n\nPress Restart to play again.`);
+                    this.showFinalUI(true);
                 }
             }
         });
@@ -1317,7 +1323,7 @@ export class Level1 extends Scene {
                         this.gunTakenSprite.setVisible(true);
                         this.crosshair.setVisible(true);
                         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-                            this.crosshair.setPosition(pointer.worldX, pointer.worldY);
+                            this.crosshair.setPosition(pointer.worldX - 25, pointer.worldY);
                         })
                         this.zombieZone.setVisible(true).setInteractive();
                         this.zombieZone.on('pointerdown', () => {
