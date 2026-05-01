@@ -334,6 +334,7 @@ export class Level1 extends Scene {
     }
 
     private buildUI() {
+        this.todaysPassword = "";
         for (let i = 0; i < 4; i++) {
             this.todaysPassword += Phaser.Math.Between(2, 9).toString();
             console.log(this.todaysPassword);
@@ -791,7 +792,7 @@ export class Level1 extends Scene {
             },
             240,
         )
-            .setDepth(20)
+            .setDepth(60)
             .setVisible(false);
 
         this.finalTitle = this.add
@@ -992,7 +993,7 @@ export class Level1 extends Scene {
             .setDepth(27)
             .setVisible(false);
         this.interruptText = this.add
-            .text(512, 640, "Ignore conversation", {
+            .text(512, 640, "Ignore conversation. Spam Space!", {
                 fontFamily: "Pix32",
                 fontSize: "20px",
                 color: "#ffffff",
@@ -1173,11 +1174,11 @@ export class Level1 extends Scene {
                 }
                 const f = Phaser.Math.FloatBetween(0, 1);
                 console.log(f);
-                if (f <= .125 && f >= .025) {
+                if (f <= .1 && f >= .025) {
                     this.startInterrupt();
                 } else if (f < .025) {
                     this.startInterruptZombie();
-                }
+                } 
             },
         });
     }
