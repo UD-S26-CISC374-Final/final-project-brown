@@ -11,15 +11,21 @@ import correctDingAudio from "../sounds/correctding.wav";
 import dudeNoiseAudio from "../sounds/dudenoise.wav";
 import emailNotiAudio from "../sounds/emailnoti.wav";
 import fanAudio from "../sounds/fanaudio.wav";
+import heyAudio from "../sounds/hey.wav";
+import menuThemeAudio from "../sounds/menutheme.wav";
 import mouseClickAudio from "../sounds/mouseclick.wav";
 import pageTurnAudio from "../sounds/pageturn.wav";
 import textBoxImage from "../objects/TextBox.png";
 import wrongBuzzerAudio from "../sounds/wrongbuzzer.wav";
 import zombieImage from "../objects/Zombie.png";
-import gunDoorClosed from "../objects/GunDoorClosed.png"
-import gunDoorOpen from "../objects/GunDoorOpen.png"
-import gunTaken from "../objects/GunTaken.png"
-import crosshair from "../objects/Crosshair.png"
+import gunDoorClosed from "../objects/GunDoorClosed.png";
+import gunDoorOpen from "../objects/GunDoorOpen.png";
+import gunTaken from "../objects/GunTaken.png";
+import crosshair from "../objects/Crosshair.png";
+import carStopAudio from "../sounds/carstop.wav";
+import openCloseAudio from "../sounds/openclose.wav";
+import footstepsAudio from "../sounds/footsteps.wav";
+import doorKnockAudio from "../sounds/doorknock.wav";
 import { SOUND_KEYS } from "../audio";
 
 
@@ -30,11 +36,11 @@ export class Preloader extends Scene {
     }
 
     init() {
-        this.add.image(512, 384, "background");
+        this.cameras.main.setBackgroundColor(0x1b3022);
 
-        this.add.rectangle(512, 384, 468, 32).setStrokeStyle(1, 0xffffff);
+        this.add.rectangle(512, 384, 468, 32, 0x0d1a10).setStrokeStyle(1, 0xb5953a);
 
-        const bar = this.add.rectangle(512 - 230, 384, 4, 28, 0xffffff);
+        const bar = this.add.rectangle(512 - 230, 384, 4, 28, 0xd4a830);
 
         this.load.on("progress", (progress: number) => {
             bar.width = 4 + 460 * progress;
@@ -78,6 +84,12 @@ export class Preloader extends Scene {
         this.load.audio(SOUND_KEYS.pageTurn, pageTurnAudio);
         this.load.audio(SOUND_KEYS.mouseClick, mouseClickAudio);
         this.load.audio(SOUND_KEYS.emailNoti, emailNotiAudio);
+        this.load.audio(SOUND_KEYS.hey, heyAudio);
+        this.load.audio(SOUND_KEYS.menuTheme, menuThemeAudio);
+        this.load.audio(SOUND_KEYS.carStop, carStopAudio);
+        this.load.audio(SOUND_KEYS.openClose, openCloseAudio);
+        this.load.audio(SOUND_KEYS.footsteps, footstepsAudio);
+        this.load.audio(SOUND_KEYS.doorKnock, doorKnockAudio);
     }
 
     create() {
