@@ -205,10 +205,7 @@ export class Ending extends Scene {
                 duration: 400,
                 onComplete: () => {
                     if (soundKey) {
-                        const volume =
-                            INTRO_SOUND_VOLUME[soundKey] ??
-                            ENDING_SOUND_VOLUME[soundKey] ??
-                            0.25;
+                        const volume = 0.25;
                         this.currentSound = this.sound.add(soundKey, { volume });
                         this.currentSound.once("complete", () => {
                             this.currentSound = null;
