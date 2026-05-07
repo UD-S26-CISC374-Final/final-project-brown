@@ -14,6 +14,8 @@ export const SOUND_KEYS = {
     openClose: "open-close",
     footsteps: "footsteps",
     doorKnock: "door-knock",
+    zombie: "zombie-sound",
+    shot: "shot",
 } as const;
 
 export function ensureLoopingSound(

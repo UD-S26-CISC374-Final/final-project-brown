@@ -26,6 +26,8 @@ import carStopAudio from "../sounds/carstop.wav";
 import openCloseAudio from "../sounds/openclose.wav";
 import footstepsAudio from "../sounds/footsteps.wav";
 import doorKnockAudio from "../sounds/doorknock.wav";
+import zombieAudio from "../sounds/zombie.wav";
+import shotAudio from "../sounds/shot.wav";
 import { SOUND_KEYS } from "../audio";
 
 
@@ -90,6 +92,8 @@ export class Preloader extends Scene {
         this.load.audio(SOUND_KEYS.openClose, openCloseAudio);
         this.load.audio(SOUND_KEYS.footsteps, footstepsAudio);
         this.load.audio(SOUND_KEYS.doorKnock, doorKnockAudio);
+        this.load.audio(SOUND_KEYS.zombie, zombieAudio);
+        this.load.audio(SOUND_KEYS.shot, shotAudio);
     }
 
     create() {
