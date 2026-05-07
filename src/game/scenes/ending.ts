@@ -15,6 +15,18 @@ const INTRO_SOUND_VOLUME: Record<string, number> = {
     [SOUND_KEYS.doorKnock]: 0.4,
 };
 
+const ENDING_SOUND_KEYS: Record<number, string> = {
+    1: SOUND_KEYS.policeSiren,
+    2: SOUND_KEYS.elevator,
+    3: SOUND_KEYS.gunshot,
+};
+
+const ENDING_SOUND_VOLUME: Record<string, number> = {
+    [SOUND_KEYS.policeSiren]: 0.25,
+    [SOUND_KEYS.elevator]: 0.4,
+    [SOUND_KEYS.gunshot]: 0.5,
+};
+
 export interface EndingSceneData {
     endingType: 1 | 2 | 3;
 }
@@ -56,6 +68,12 @@ const ENDING_SCREENS: Record<number, string[]> = {
         "The man reaches into his coat.",
         "Bang.",
     ],
+};
+
+const ENDING_IMAGE_KEYS: Record<number, string> = {
+    1: "ending-1",
+    2: "ending-2",
+    3: "ending-3",
 };
 
 export class Ending extends Scene {
@@ -152,7 +170,9 @@ export class Ending extends Scene {
         const text = this.screens[index] ?? "";
         const isFirst = index === 0;
         const isLast = index === this.screens.length - 1;
-        const soundKey = INTRO_SOUND_MAP[text] ?? null;
+        const soundKey = isLast
+            ? ENDING_SOUND_KEYS[this.endingType]
+            : (INTRO_SOUND_MAP[text] ?? null);
 
         this.messageText
             .setY(isLast ? 460 : 340)
@@ -169,21 +189,12 @@ export class Ending extends Scene {
         ];
 
         if (isLast) {
-            const box = this.add
-                .rectangle(512, 215, 600, 320, 0x1a1a1a)
-                .setStrokeStyle(2, 0x555555)
+            const endingImage = this.add
+                .image(512, 215, ENDING_IMAGE_KEYS[this.endingType])
+                .setDisplaySize(600, 320)
                 .setAlpha(0);
-            const label = this.add
-                .text(512, 215, "600 × 320", {
-                    fontFamily: "Pix32",
-                    fontSize: "20px",
-                    color: "#555555",
-                    align: "center",
-                })
-                .setOrigin(0.5)
-                .setAlpha(0);
-            this.imagePlaceholderObjects = [box, label];
-            tweenTargets.push(box, label);
+            this.imagePlaceholderObjects = [endingImage];
+            tweenTargets.push(endingImage);
         }
 
         this.cameras.main.fadeIn(600, 0, 0, 0);
@@ -194,7 +205,11 @@ export class Ending extends Scene {
                 duration: 400,
                 onComplete: () => {
                     if (soundKey) {
-                        this.currentSound = this.sound.add(soundKey, { volume: INTRO_SOUND_VOLUME[soundKey] ?? 0.25 });
+                        const volume =
+                            INTRO_SOUND_VOLUME[soundKey] ??
+                            ENDING_SOUND_VOLUME[soundKey] ??
+                            0.25;
+                        this.currentSound = this.sound.add(soundKey, { volume });
                         this.currentSound.once("complete", () => {
                             this.currentSound = null;
                             this.continueBtn.setInteractive({ useHandCursor: true });

@@ -16,6 +16,9 @@ export const SOUND_KEYS = {
     doorKnock: "door-knock",
     zombie: "zombie-sound",
     shot: "shot",
+    policeSiren: "police-siren",
+    elevator: "elevator",
+    gunshot: "gunshot",
 } as const;
 
 export function ensureLoopingSound(

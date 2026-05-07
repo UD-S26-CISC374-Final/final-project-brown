@@ -28,7 +28,13 @@ import footstepsAudio from "../sounds/footsteps.wav";
 import doorKnockAudio from "../sounds/doorknock.wav";
 import zombieAudio from "../sounds/zombie.wav";
 import shotAudio from "../sounds/shot.wav";
+import policeSirenAudio from "../sounds/policesiren.wav";
+import elevatorAudio from "../sounds/elevator.wav";
+import gunshotAudio from "../sounds/gunshot.wav";
 import { SOUND_KEYS } from "../audio";
+import ending1Image from "../objects/ending1cops.png";
+import ending2Image from "../objects/ending2office.png";
+import ending3Image from "../objects/ending3fired.png";
 
 
 
@@ -78,6 +84,9 @@ export class Preloader extends Scene {
         this.load.image("gun-door-open", gunDoorOpen);
         this.load.image("gun-taken", gunTaken);
         this.load.image("crosshair", crosshair);
+        this.load.image("ending-1", ending1Image);
+        this.load.image("ending-2", ending2Image);
+        this.load.image("ending-3", ending3Image);
 
         this.load.audio(SOUND_KEYS.fanAudio, fanAudio);
         this.load.audio(SOUND_KEYS.dudeNoise, dudeNoiseAudio);
@@ -94,6 +103,9 @@ export class Preloader extends Scene {
         this.load.audio(SOUND_KEYS.doorKnock, doorKnockAudio);
         this.load.audio(SOUND_KEYS.zombie, zombieAudio);
         this.load.audio(SOUND_KEYS.shot, shotAudio);
+        this.load.audio(SOUND_KEYS.policeSiren, policeSirenAudio);
+        this.load.audio(SOUND_KEYS.elevator, elevatorAudio);
+        this.load.audio(SOUND_KEYS.gunshot, gunshotAudio);
     }
 
     create() {
