@@ -13,6 +13,13 @@ interface ShopSceneData {
     revealCount?: number;
     plotEmailsAccepted?: number;
     plotEmailsRejected?: number;
+    tutorialMode?: boolean;
+}
+
+interface LevelStartData extends ShopSceneData {
+    shieldActive?: boolean;
+    shopOutcome?: "continue" | "dead" | "win";
+    outcomeMessage?: string;
 }
 
 export class Shop extends Scene {
@@ -29,6 +36,7 @@ export class Shop extends Scene {
     private utilitiesPaid = false;
     private rentPaid = false;
     private shieldPurchased = false;
+    private tutorialMode = false;
 
     private moneyText!: Phaser.GameObjects.Text;
     private statusText!: Phaser.GameObjects.Text;
@@ -57,14 +65,16 @@ export class Shop extends Scene {
         this.revealCount = data.revealCount ?? 0;
         this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
         this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
-        this.foodPaid = this.day === 1;
-        this.utilitiesPaid = this.day === 1;
-        this.rentPaid = this.day === 1;
+        this.tutorialMode = data.tutorialMode ?? false;
+        this.foodPaid = this.day === 1 || this.tutorialMode;
+        this.utilitiesPaid = this.day === 1 || this.tutorialMode;
+        this.rentPaid = this.day === 1 || this.tutorialMode;
         this.shieldPurchased = false;
     }
 
     create() {
         this.cameras.main.setBackgroundColor(0x1a2018);
+        this.cameras.main.fadeIn(250, 0, 0, 0);
 
         this.add.rectangle(512, 384, 1024, 768, 0x090d09, 0.72);
         this.add
@@ -76,12 +86,19 @@ export class Shop extends Scene {
         this.add.rectangle(512, 186, 700, 3, 0xd4a830, 1);
 
         this.add
-            .text(512, 148, `Supply Window - Day ${this.day}`, {
-                fontFamily: "Pix32",
-                fontSize: "40px",
-                color: "#f4ecd8",
-                fontStyle: "bold",
-            })
+            .text(
+                512,
+                148,
+                this.tutorialMode ?
+                    "Shop Walkthrough"
+                :   `Supply Window - Day ${this.day}`,
+                {
+                    fontFamily: "Dotemp-8bit",
+                    fontSize: "40px",
+                    color: "#f4ecd8",
+                    fontStyle: "bold",
+                },
+            )
             .setOrigin(0.5);
 
         this.moneyText = this.add
@@ -90,7 +107,7 @@ export class Shop extends Scene {
                 224,
                 `Money: $${this.money} | Points: ${this.totalPoints}`,
                 {
-                    fontFamily: "Pix32",
+                    fontFamily: "Dotemp-8bit",
                     fontSize: "26px",
                     color: "#2f4b36",
                     backgroundColor: "#ece1c4",
@@ -104,11 +121,12 @@ export class Shop extends Scene {
                 296,
                 "Buy food and utilities every day.\nPay rent at least once every other day.\nDay 1 essentials are already covered. Essentials cost $3 each.",
                 {
-                    fontFamily: "Pix32",
+                    fontFamily: "Dotemp-8bit",
                     fontSize: "22px",
                     color: "#433927",
                     align: "center",
                     lineSpacing: 8,
+                    wordWrap: { width: 640 },
                 },
             )
             .setOrigin(0.5);
@@ -119,10 +137,11 @@ export class Shop extends Scene {
                 352,
                 "Powerups: hint $5, shield $10, eliminate $15. Shield expires after one shift.",
                 {
-                    fontFamily: "Pix32",
+                    fontFamily: "Dotemp-8bit",
                     fontSize: "16px",
                     color: "#5a4a32",
                     align: "center",
+                    wordWrap: { width: 640 },
                 },
             )
             .setOrigin(0.5);
@@ -139,21 +158,48 @@ export class Shop extends Scene {
             this.buyItem("rent");
         });
 
-        this.createButton(300, 490, "Hint ($5)", "#66563b", () => {
-            this.buyItem("hint");
-        });
+        this.createButton(
+            300,
+            490,
+            "Hint ($5)",
+            "#66563b",
+            () => {
+                this.buyItem("hint");
+            },
+            "Hint reveals a clue about the selected email.",
+        );
 
-        this.createButton(512, 490, "Shield ($10)", "#66563b", () => {
-            this.buyItem("shield");
-        });
+        this.createButton(
+            512,
+            490,
+            "Shield ($10)",
+            "#66563b",
+            () => {
+                this.buyItem("shield");
+            },
+            "Shield blocks one mistake during the next shift.",
+        );
 
-        this.createButton(724, 490, "Eliminate ($15)", "#66563b", () => {
-            this.buyItem("reveal");
-        });
+        this.createButton(
+            724,
+            490,
+            "Eliminate ($15)",
+            "#66563b",
+            () => {
+                this.buyItem("reveal");
+            },
+            "Eliminate removes one wrong answer for the selected email.",
+        );
 
-        this.createButton(512, 560, "Continue", "#4d5f55", () => {
-            this.leaveShop();
-        });
+        this.createButton(
+            512,
+            560,
+            this.tutorialMode ? "Start Day 1" : "Continue",
+            "#4d5f55",
+            () => {
+                this.leaveShop();
+            },
+        );
 
         this.add
             .rectangle(512, 666, 650, 160, 0xe8d9a8, 0.97)
@@ -161,7 +207,7 @@ export class Shop extends Scene {
 
         this.statusText = this.add
             .text(512, 666, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#2f4b36",
                 align: "center",
@@ -171,10 +217,98 @@ export class Shop extends Scene {
             .setOrigin(0.5);
 
         const introMessage =
-            this.day === 1 ?
+            this.tutorialMode ?
+                "Hover any button to see what it does. Click Start Day 1 when you're ready."
+            : this.day === 1 ?
                 "Day 1 essentials are already paid. Buy powerups or continue."
             :   "Make your purchases.";
         this.updateStatus(introMessage, "#2f4b36");
+
+        if (this.tutorialMode) {
+            this.showWalkthroughPopup();
+        }
+    }
+
+    private showWalkthroughPopup() {
+        const bg = this.add
+            .rectangle(512, 384, 1024, 768, 0x000000, 0.7)
+            .setDepth(50)
+            .setInteractive();
+
+        const panel = this.add
+            .rectangle(512, 384, 720, 460, 0xf0e4c4, 1)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(51);
+
+        const titleBar = this.add
+            .rectangle(512, 200, 720, 60, 0x1b3022, 1)
+            .setStrokeStyle(2, 0xb5953a)
+            .setDepth(51);
+
+        const title = this.add
+            .text(512, 200, "Shop Walkthrough", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "30px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setOrigin(0.5)
+            .setDepth(52);
+
+        const body = this.add
+            .text(
+                512,
+                370,
+                "This is the supply window. After every shift, you stop here before the next day.\n\n" +
+                    "Food and utilities ($3 each) must be paid every day. Rent ($3) must be paid at least once every other day. Day 1 essentials are covered for free.\n\n" +
+                    "Powerups: Hint ($5) gives a clue on the selected email. Shield ($10) blocks one mistake next shift. Eliminate ($15) removes one wrong answer.\n\n" +
+                    "Walkthrough only — no real purchases are needed. Your tutorial money and points will reset before Day 1 begins.",
+                {
+                    fontFamily: "Dotemp-8bit",
+                    fontSize: "16px",
+                    color: "#2a251c",
+                    align: "center",
+                    lineSpacing: 4,
+                    wordWrap: { width: 660 },
+                },
+            )
+            .setOrigin(0.5)
+            .setDepth(52);
+
+        const okButton = this.add
+            .text(512, 562, "OK", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "22px",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#4d5f55",
+                fixedWidth: 160,
+                align: "center",
+                padding: { left: 8, right: 8, top: 12, bottom: 12 },
+            })
+            .setOrigin(0.5)
+            .setDepth(52)
+            .setInteractive({ useHandCursor: true });
+
+        const hoverColor = this.brightenColor("#4d5f55", 18);
+        okButton.on("pointerover", () => {
+            okButton.setStyle({ backgroundColor: hoverColor });
+            okButton.setScale(1.02);
+        });
+        okButton.on("pointerout", () => {
+            okButton.setStyle({ backgroundColor: "#4d5f55" });
+            okButton.setScale(1);
+        });
+        okButton.on("pointerdown", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+            bg.destroy();
+            panel.destroy();
+            titleBar.destroy();
+            title.destroy();
+            body.destroy();
+            okButton.destroy();
+        });
     }
 
     private createButton(
@@ -183,10 +317,11 @@ export class Shop extends Scene {
         label: string,
         backgroundColor: string,
         onClick: () => void,
+        hoverMessage?: string,
     ) {
         const button = this.add
             .text(x, y, label, {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
                 color: "#f8f0dc",
                 stroke: "#211d17",
@@ -197,8 +332,7 @@ export class Shop extends Scene {
                 padding: { left: 8, right: 8, top: 12, bottom: 12 },
             })
             .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .setShadow(0, 2, "#000000", 6, true, true);
+            .setInteractive({ useHandCursor: true });
 
         const hoverColor = this.brightenColor(backgroundColor, 18);
 
@@ -209,6 +343,9 @@ export class Shop extends Scene {
         button.on("pointerover", () => {
             button.setStyle({ backgroundColor: hoverColor });
             button.setScale(1.02);
+            if (hoverMessage) {
+                this.updateStatus(hoverMessage, "#2f4b36");
+            }
         });
         button.on("pointerout", () => {
             button.setStyle({ backgroundColor });
@@ -278,8 +415,25 @@ export class Shop extends Scene {
     }
 
     private leaveShop() {
+        if (this.tutorialMode) {
+            localStorage.setItem("tutorialCompleted", "true");
+            this.startLevelAfterFade({
+                day: 1,
+                totalPoints: 0,
+                money: 0,
+                daysWithoutRent: 0,
+                hintCount: 0,
+                revealCount: 0,
+                plotEmailsAccepted: 0,
+                plotEmailsRejected: 0,
+                shieldActive: false,
+                shopOutcome: "continue",
+            });
+            return;
+        }
+
         if (!this.foodPaid || !this.utilitiesPaid) {
-            this.scene.start("Level1", {
+            this.startLevelAfterFade({
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
@@ -299,7 +453,7 @@ export class Shop extends Scene {
             this.rentPaid ? 0 : this.daysWithoutRent + 1;
 
         if (updatedDaysWithoutRent > 1) {
-            this.scene.start("Level1", {
+            this.startLevelAfterFade({
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
@@ -316,7 +470,7 @@ export class Shop extends Scene {
         }
 
         if (this.day >= MAX_DAYS) {
-            this.scene.start("Level1", {
+            this.startLevelAfterFade({
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
@@ -331,7 +485,7 @@ export class Shop extends Scene {
             return;
         }
 
-        this.scene.start("Level1", {
+        this.startLevelAfterFade({
             day: this.day + 1,
             totalPoints: this.totalPoints,
             money: this.money,
@@ -342,6 +496,13 @@ export class Shop extends Scene {
             plotEmailsRejected: this.plotEmailsRejected,
             shieldActive: this.shieldPurchased,
             shopOutcome: "continue",
+        });
+    }
+
+    private startLevelAfterFade(data: LevelStartData) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start("Level1", data);
         });
     }
 

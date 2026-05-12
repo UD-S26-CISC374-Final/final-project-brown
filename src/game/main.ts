@@ -15,7 +15,7 @@ const config: Phaser.Types.Core.GameConfig = {
     version: "0.0.1",
     type: CANVAS,
     parent: "game-container",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#000000",
     scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect, Ending],
     scale: {
         parent: "game-container",

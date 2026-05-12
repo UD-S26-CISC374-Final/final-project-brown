@@ -8,7 +8,7 @@ const INTRO_SOUND_MAP: Record<string, string> = {
     "He knocks. You answer.": SOUND_KEYS.doorKnock,
 };
 
-const INTRO_SOUND_VOLUME: Record<string, number> = {
+const INTRO_SOUND_VOLUME: Partial<Record<string, number>> = {
     [SOUND_KEYS.carStop]: 0.25,
     [SOUND_KEYS.openClose]: 0.4,
     [SOUND_KEYS.footsteps]: 0.4,
@@ -21,7 +21,7 @@ const ENDING_SOUND_KEYS: Record<number, string> = {
     3: SOUND_KEYS.gunshot,
 };
 
-const ENDING_SOUND_VOLUME: Record<string, number> = {
+const ENDING_SOUND_VOLUME: Partial<Record<string, number>> = {
     [SOUND_KEYS.policeSiren]: 0.25,
     [SOUND_KEYS.elevator]: 0.4,
     [SOUND_KEYS.gunshot]: 0.5,
@@ -105,7 +105,7 @@ export class Ending extends Scene {
 
         this.messageText = this.add
             .text(512, 340, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "30px",
                 color: "#f4ecd8",
                 align: "center",
@@ -117,7 +117,7 @@ export class Ending extends Scene {
 
         this.continueBtn = this.add
             .text(512, 680, "Continue", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "24px",
                 color: "#f8f0dc",
                 stroke: "#211d17",
@@ -205,7 +205,10 @@ export class Ending extends Scene {
                 duration: 400,
                 onComplete: () => {
                     if (soundKey) {
-                        const volume = 0.25;
+                        const volume =
+                            (isLast
+                                ? ENDING_SOUND_VOLUME[soundKey]
+                                : INTRO_SOUND_VOLUME[soundKey]) ?? 0.25;
                         this.currentSound = this.sound.add(soundKey, { volume });
                         this.currentSound.once("complete", () => {
                             this.currentSound = null;
@@ -235,7 +238,7 @@ export class Ending extends Scene {
 
         const endLabel = this.add
             .text(512, 220, "— End —", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "28px",
                 color: "#b5a36a",
                 align: "center",
@@ -245,7 +248,7 @@ export class Ending extends Scene {
 
         const achievedLabel = this.add
             .text(512, 300, `${endingName} Ending Achieved`, {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
                 color: "#d4c9a8",
                 align: "center",
@@ -259,7 +262,7 @@ export class Ending extends Scene {
             "Restart Game",
             "#44624c",
             () => {
-                this.scene.start("Level1", { day: 1 });
+                this.startSceneAfterFade("Level1", { day: 1 });
             },
         );
         const menuBtn = this.createButton(
@@ -301,6 +304,13 @@ export class Ending extends Scene {
         });
     }
 
+    private startSceneAfterFade(sceneKey: string, data?: object) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start(sceneKey, data);
+        });
+    }
+
     private createButton(
         x: number,
         y: number,
@@ -310,7 +320,7 @@ export class Ending extends Scene {
     ) {
         const button = this.add
             .text(x, y, label, {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "26px",
                 color: "#f8f0dc",
                 stroke: "#211d17",

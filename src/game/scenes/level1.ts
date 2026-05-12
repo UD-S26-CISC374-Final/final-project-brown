@@ -13,6 +13,7 @@ import {
     getRulebookPages,
     MAX_DAYS,
 } from "../email-content";
+import { clearSavedRun, saveRun } from "../save-game";
 
 interface LevelSceneData {
     day?: number;
@@ -27,12 +28,113 @@ interface LevelSceneData {
     plotEmailsAccepted?: number;
     plotEmailsRejected?: number;
     endingPreview?: 1 | 2 | 3;
+    tutorialMode?: boolean;
 }
+
+type TutorialPhase =
+    | "emails1"
+    | "awaiting-coworker"
+    | "awaiting-captcha"
+    | "awaiting-zombie"
+    | "emails2"
+    | "done";
+
+const TUTORIAL_EMAILS: EmailCase[] = [
+    {
+        from: "John Smith",
+        domain: "john@redforge.com",
+        subject: "Updated MFA Schedule",
+        body: "Starting Friday, RedForge staff must use MFA when connecting to internal VPN resources. Please review the updated schedule.",
+        attachments: ["mfa_schedule.pdf"],
+        type: "valid",
+        violations: [],
+    },
+    {
+        from: "Sarah Chen",
+        domain: "john@redforge.security",
+        subject: "Password Reset Utility",
+        body: "Use the attached tool to automatically reset your account password before end of day.",
+        attachments: ["reset_tool.exe"],
+        type: "phishing",
+        violations: [
+            "username does not match sender",
+            ".exe attachments are always banned",
+        ],
+    },
+    {
+        from: "Olivia Reed",
+        domain: "olivia@stonegate.xyz",
+        subject: "Visitor Desk Instructions",
+        body: "Reception needs all visitors logged at the front desk before temporary badges are issued.",
+        attachments: [],
+        type: "phishing",
+        violations: ["stonegate.xyz is not an approved StoneGate domain"],
+    },
+];
+
+interface TutorialPopup {
+    title: string;
+    body: string;
+}
+
+const TUTORIAL_POPUPS: Record<
+    "email1" | "email2" | "email3" | "coworker" | "captcha" | "zombie",
+    TutorialPopup
+> = {
+    email1: {
+        title: "Example Round: Email 1",
+        body:
+            "Welcome to the example round. Your first email is from John Smith at RedForge.\n\n" +
+            "Everything in this one passes the rulebook. Open the computer when it arrives and try classifying it Valid.",
+    },
+    email2: {
+        title: "Example Round: Email 2",
+        body:
+            "Your next email has clear problems.\n\n" +
+            "Look at the sender name versus the email address username, and check the attached file. This one should be marked Phishing.",
+    },
+    email3: {
+        title: "Example Round: Email 3",
+        body:
+            "One more email before the shift wraps up. We will not tell you whether it is valid or phishing this time.\n\n" +
+            "Hint: Open the rulebook and check the StoneGate company page.",
+    },
+    coworker: {
+        title: "Distraction Event: The Coworker",
+        body:
+            "A coworker is about to wander over and start talking. While he is here, your panels close and the distraction meter starts falling.\n\n" +
+            "Mash the SPACE key to fill the bar and get him to leave.",
+    },
+    captcha: {
+        title: "Distraction Event: CAPTCHA",
+        body:
+            "Sometimes the system will stop you with a human verification check.\n\n" +
+            "Read the distorted 6-character code, type it on your keyboard, then press Enter before time runs out. Backspace fixes mistakes.",
+    },
+    zombie: {
+        title: "Distraction Event: The Zombie",
+        body:
+            "A zombie is about to break through the door. You will have 20 seconds.\n\n" +
+            "1. Note today's password at the top of the screen.\n" +
+            "2. Click the gun cabinet to open the keypad.\n" +
+            "3. Enter the 4-digit password and press Enter.\n" +
+            "4. Grab the gun, then click the zombie.",
+    },
+};
 
 interface RulebookPage {
     title: string;
     body: string;
     companyIndex?: number;
+}
+
+interface DayViolation {
+    index: number;
+    from: string;
+    domain: string;
+    subject: string;
+    correctType: EmailType;
+    reason: string;
 }
 
 export class Level1 extends Scene {
@@ -60,6 +162,16 @@ export class Level1 extends Scene {
     private awaitingPlotInterruptEnd = false;
     private incomingEndingPreview = 0;
 
+    private tutorialMode = false;
+    private tutorialEmailIndex = 0;
+    private tutorialPhase: TutorialPhase = "emails1";
+    private pendingTutorialAction: (() => void) | null = null;
+    private tutorialPopupBg!: Phaser.GameObjects.Rectangle;
+    private tutorialPopupPanel!: Phaser.GameObjects.Rectangle;
+    private tutorialPopupTitle!: Phaser.GameObjects.Text;
+    private tutorialPopupBody!: Phaser.GameObjects.Text;
+    private tutorialPopupBeginButton!: Phaser.GameObjects.Text;
+
     private inboxEmails: EmailCase[] = [];
     private pendingArrivalEmails: EmailCase[] = [];
     private selectedInboxIndex = -1;
@@ -69,9 +181,15 @@ export class Level1 extends Scene {
     private interruptActive = false;
     private interruptProgress = 0;
     private interruptTick: Phaser.Time.TimerEvent | null = null;
+    private interruptChanceMultiplier = 1;
     private countdownTimer: Phaser.Time.TimerEvent | null = null;
     private zombieCountdownTimer: Phaser.Time.TimerEvent | null = null;
     private zombieTimerText: Phaser.GameObjects.Text | null = null;
+    private captchaActive = false;
+    private captchaCode = "";
+    private captchaInput = "";
+    private captchaTimer: Phaser.Time.TimerEvent | null = null;
+    private captchaTimeRemaining = 0;
 
     private triageVisible = true;
     private computerPanelOpen = false;
@@ -103,6 +221,21 @@ export class Level1 extends Scene {
     private feedbackHoldUntilMs = 0;
     private deferredFeedbackTimer: Phaser.Time.TimerEvent | null = null;
     private dayFinishTimer: Phaser.Time.TimerEvent | null = null;
+    private feedbackAlertTween: Phaser.Tweens.Tween | null = null;
+    private dayViolations: DayViolation[] = [];
+    private violationNoticeHoldUntilMs = 0;
+    private violationNoticeTimer: Phaser.Time.TimerEvent | null = null;
+    private violationNoticeBg!: Phaser.GameObjects.Rectangle;
+    private violationNoticePanel!: Phaser.GameObjects.Rectangle;
+    private violationNoticeTitle!: Phaser.GameObjects.Text;
+    private violationNoticeFromText!: Phaser.GameObjects.Text;
+    private violationNoticeReasonText!: Phaser.GameObjects.Text;
+    private violationLogButton!: Phaser.GameObjects.Text;
+    private violationLogBg!: Phaser.GameObjects.Rectangle;
+    private violationLogPanel!: Phaser.GameObjects.Rectangle;
+    private violationLogTitle!: Phaser.GameObjects.Text;
+    private violationLogBody!: Phaser.GameObjects.Text;
+    private violationLogCloseButton!: Phaser.GameObjects.Text;
 
     private endScreenBg!: Phaser.GameObjects.Rectangle;
     private computerPanelBg!: Phaser.GameObjects.Rectangle;
@@ -130,6 +263,7 @@ export class Level1 extends Scene {
     private rulebookCoreButton!: Phaser.GameObjects.Text;
     private rulebookRosterButton!: Phaser.GameObjects.Text;
     private rulebookTodayButton!: Phaser.GameObjects.Text;
+    private rulebookCompanyLabelText!: Phaser.GameObjects.Text;
     private companyRuleButtons: Phaser.GameObjects.Text[] = [];
 
     private validButton!: Phaser.GameObjects.Text;
@@ -138,6 +272,9 @@ export class Level1 extends Scene {
 
     private endDayTitle!: Phaser.GameObjects.Text;
     private endDaySummary!: Phaser.GameObjects.Text;
+    private endDayPromptText!: Phaser.GameObjects.Text;
+    private endDayShopFrame: Phaser.GameObjects.Rectangle[] = [];
+    private endDayViolationButton!: Phaser.GameObjects.Text;
     private toShopButton!: Phaser.GameObjects.Text;
 
     private finalTitle!: Phaser.GameObjects.Text;
@@ -150,6 +287,15 @@ export class Level1 extends Scene {
     private interruptBarBg!: Phaser.GameObjects.Rectangle;
     private interruptBarFill!: Phaser.GameObjects.Rectangle;
     private interruptText!: Phaser.GameObjects.Text;
+    private captchaBg!: Phaser.GameObjects.Rectangle;
+    private captchaPanel!: Phaser.GameObjects.Rectangle;
+    private captchaTitleText!: Phaser.GameObjects.Text;
+    private captchaPromptText!: Phaser.GameObjects.Text;
+    private captchaInputText!: Phaser.GameObjects.Text;
+    private captchaTimerText!: Phaser.GameObjects.Text;
+    private captchaHintText!: Phaser.GameObjects.Text;
+    private captchaNoise!: Phaser.GameObjects.Graphics;
+    private captchaCodeTexts: Phaser.GameObjects.Text[] = [];
 
     private zombieSprite!: Phaser.GameObjects.Image;
     private gunDoorClosedSprite!: Phaser.GameObjects.Image;
@@ -177,8 +323,34 @@ export class Level1 extends Scene {
     private inputPassword = "";
     private todaysPassword = "";
     private passwordCorrect = 0;
-    private readonly updateCrosshairPosition = (pointer: Phaser.Input.Pointer) => {
-        this.crosshair.setPosition(pointer.worldX - 25, pointer.worldY);
+    private readonly updateCrosshairPosition = (
+        pointer: Phaser.Input.Pointer,
+    ) => {
+        this.crosshair.setPosition(pointer.worldX, pointer.worldY);
+    };
+    private readonly handleCaptchaKeyDown = (event: KeyboardEvent) => {
+        if (!this.captchaActive) {
+            return;
+        }
+
+        if (event.key === "Backspace") {
+            event.preventDefault();
+            this.captchaInput = this.captchaInput.slice(0, -1);
+            this.refreshCaptchaInput();
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            this.submitCaptcha();
+            return;
+        }
+
+        if (/^[a-zA-Z0-9]$/.test(event.key) && this.captchaInput.length < 6) {
+            event.preventDefault();
+            this.captchaInput += event.key.toUpperCase();
+            this.refreshCaptchaInput();
+        }
     };
 
     private plotDialogPanel!: Phaser.GameObjects.Rectangle;
@@ -211,6 +383,7 @@ export class Level1 extends Scene {
         this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
         this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
         this.incomingEndingPreview = data.endingPreview ?? 0;
+        this.tutorialMode = data.tutorialMode ?? false;
         if (data.endingPreview === 1) {
             this.plotEmailsAccepted = 7;
             this.plotEmailsRejected = 0;
@@ -224,10 +397,12 @@ export class Level1 extends Scene {
     }
 
     create() {
+        this.cameras.main.fadeIn(250, 0, 0, 0);
         ensureLoopingSound(this, SOUND_KEYS.fanAudio, { volume: 0.0625 });
         this.events.once("shutdown", () => {
             stopSound(this, SOUND_KEYS.dudeNoise);
             stopSound(this, SOUND_KEYS.fanAudio);
+            this.input.keyboard?.off("keydown", this.handleCaptchaKeyDown);
         });
         this.buildDesk();
         this.buildUI();
@@ -253,17 +428,27 @@ export class Level1 extends Scene {
             return;
         }
 
-        this.startDay(this.day);
+        if (this.tutorialMode) {
+            this.startTutorial();
+        } else {
+            this.startDay(this.day);
+        }
 
         this.timerValue = 300;
         this.timerText = this.add
-            .text(860, 57, `Time: ${this.timerValue}s`, {
-                fontFamily: "Pix32",
+            .text(765, 57, `Time: ${this.timerValue}s`, {
+                fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
                 color: "#f4ecd8",
             })
             .setStyle({ backgroundColor: "#213426" })
             .setDepth(11);
+
+        if (this.tutorialMode) {
+            this.timerText.setVisible(false);
+            return;
+        }
+
         this.countdownTimer = this.time.addEvent({
             delay: 1000,
             loop: true,
@@ -312,7 +497,7 @@ export class Level1 extends Scene {
             .setInteractive({ useHandCursor: true });
 
         this.filesZone = this.add
-            .zone(260, 406, 430, 520)
+            .zone(305, 406, 500, 520)
             .setInteractive({ useHandCursor: true });
 
         this.computerZone.on("pointerover", () => {
@@ -384,12 +569,20 @@ export class Level1 extends Scene {
             .setStrokeStyle(2, 0xb5953a)
             .setDepth(10);
         this.add.rectangle(512, 116, 1024, 4, 0xd4a830, 1).setDepth(10);
-        this.add.text(700, 20, "Today's Password: " + this.todaysPassword, {
-            fontSize: "20px",
-            color: "#f4ecd8",
-        }).setDepth(10);
+        this.add
+            .text(
+                700,
+                20,
+                "Today's Password: " + this.formatPassword(this.todaysPassword),
+                {
+                    fontFamily: "Dotemp-8bit",
+                    fontSize: "20px",
+                    color: "#f4ecd8",
+                },
+            )
+            .setDepth(10);
         this.mainmenuButton = this.createButton(
-            780,
+            950,
             70,
             "Main Menu",
             "#66563b",
@@ -417,7 +610,7 @@ export class Level1 extends Scene {
             .setDepth(11);
 
         this.moneyText = this.add
-            .text(250, 57, "", {
+            .text(175, 57, "", {
                 fontSize: "22px",
                 color: "#e2d39e",
             })
@@ -425,7 +618,7 @@ export class Level1 extends Scene {
             .setDepth(11);
 
         this.progressText = this.add
-            .text(460, 59, "", {
+            .text(350, 59, "", {
                 fontSize: "20px",
                 color: "#e2d39e",
             })
@@ -442,8 +635,115 @@ export class Level1 extends Scene {
                 fontSize: "20px",
                 color: "#2c271f",
                 wordWrap: { width: 860 },
+                lineSpacing: 4,
             })
             .setDepth(30);
+
+        this.violationLogButton = this.createButton(
+            665,
+            70,
+            "Violations",
+            "#5f6359",
+            () => {
+                this.showViolationLog(true);
+            },
+            130,
+        )
+            .setDepth(14)
+            .setVisible(false);
+
+        this.violationNoticeBg = this.add
+            .rectangle(512, 384, 1024, 768, 0x090d09, 0.42)
+            .setDepth(69)
+            .setInteractive()
+            .setVisible(false);
+
+        this.violationNoticePanel = this.add
+            .rectangle(512, 384, 650, 300, 0xf0e4c4, 0.98)
+            .setStrokeStyle(4, 0xa83328)
+            .setDepth(70)
+            .setVisible(false);
+
+        this.violationNoticeTitle = this.add
+            .text(512, 280, "", {
+                fontSize: "32px",
+                color: "#7a2d25",
+                fontStyle: "bold",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(71)
+            .setVisible(false);
+
+        this.violationNoticeFromText = this.add
+            .text(512, 338, "", {
+                fontSize: "18px",
+                color: "#2f4b36",
+                align: "center",
+                wordWrap: { width: 570 },
+                lineSpacing: 4,
+            })
+            .setOrigin(0.5)
+            .setDepth(71)
+            .setVisible(false);
+
+        this.violationNoticeReasonText = this.add
+            .text(512, 420, "", {
+                fontSize: "20px",
+                color: "#433927",
+                align: "center",
+                wordWrap: { width: 570 },
+                lineSpacing: 8,
+            })
+            .setOrigin(0.5)
+            .setDepth(71)
+            .setVisible(false);
+
+        this.violationLogBg = this.add
+            .rectangle(512, 384, 1024, 768, 0x090d09, 0.62)
+            .setDepth(74)
+            .setInteractive()
+            .setVisible(false);
+
+        this.violationLogPanel = this.add
+            .rectangle(512, 384, 720, 480, 0xf0e4c4, 0.99)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(75)
+            .setVisible(false);
+
+        this.violationLogTitle = this.add
+            .text(512, 198, "Today's Violations", {
+                fontSize: "30px",
+                color: "#7a2d25",
+                fontStyle: "bold",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(76)
+            .setVisible(false);
+
+        this.violationLogBody = this.add
+            .text(190, 250, "", {
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 645 },
+                lineSpacing: 7,
+            })
+            .setDepth(76)
+            .setVisible(false);
+
+        this.violationLogCloseButton = this.createButton(
+            512,
+            596,
+            "Close",
+            "#66563b",
+            () => {
+                this.showViolationLog(false);
+            },
+            160,
+        )
+            .setDepth(76)
+            .setVisible(false);
 
         this.endScreenBg = this.add
             .rectangle(512, 384, 1024, 768, 0x30342b, 0.96)
@@ -451,58 +751,88 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.computerPanelBg = this.add
-            .rectangle(770, 466, 470, 590, 0xf0e4c4, 1)
-            .setStrokeStyle(3, 0x7a6030)
+            .rectangle(770, 466, 470, 590, 0x101913, 1)
+            .setStrokeStyle(4, 0x324b38)
             .setDepth(15)
             .setVisible(false);
 
         this.filesPanelBg = this.add
-            .rectangle(255, 466, 460, 590, 0xf0e4c4, 1)
+            .rectangle(265, 466, 500, 590, 0xf0e4c4, 1)
             .setStrokeStyle(3, 0x7a6030)
             .setDepth(15)
             .setVisible(false);
 
         this.computerPanelChrome = [
             this.add
-                .rectangle(770, 202, 432, 46, 0x1b3022, 1)
-                .setStrokeStyle(2, 0xb5953a)
+                .rectangle(770, 466, 432, 512, 0x0d1f17, 1)
+                .setStrokeStyle(3, 0x4d6a50)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(770, 380, 432, 3, 0xd4a830, 0.9)
+                .rectangle(770, 202, 432, 46, 0x07120d, 1)
+                .setStrokeStyle(2, 0x5b7a54)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(770, 492, 432, 178, 0xf8f0dc, 0.7)
-                .setStrokeStyle(1, 0xd0bd84)
+                .rectangle(770, 260, 400, 2, 0x6fb76b, 0.45)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(770, 640, 432, 70, 0xe2d39e, 0.32)
-                .setStrokeStyle(1, 0xd0bd84)
+                .rectangle(770, 322, 400, 2, 0x6fb76b, 0.22)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 374, 400, 3, 0x6fb76b, 0.75)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 488, 400, 176, 0x10281d, 1)
+                .setStrokeStyle(1, 0x4d6a50)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 640, 400, 76, 0x17251a, 1)
+                .setStrokeStyle(1, 0x4d6a50)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(770, 722, 400, 48, 0x08120d, 1)
+                .setStrokeStyle(1, 0x5b7a54)
                 .setDepth(15)
                 .setVisible(false),
         ];
 
         this.filesPanelChrome = [
             this.add
-                .rectangle(255, 202, 422, 46, 0x1b3022, 1)
+                .rectangle(265, 202, 462, 46, 0x1b3022, 1)
                 .setStrokeStyle(2, 0xb5953a)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(255, 266, 422, 3, 0xd4a830, 0.9)
+                .rectangle(265, 266, 462, 3, 0xd4a830, 0.9)
                 .setDepth(15)
                 .setVisible(false),
             this.add
-                .rectangle(255, 526, 422, 330, 0xf8f0dc, 0.72)
+                .rectangle(265, 365, 462, 2, 0xb5953a, 0.45)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(265, 544, 462, 360, 0xf8f0dc, 0.72)
                 .setStrokeStyle(1, 0xd0bd84)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(50, 544, 3, 360, 0xb5953a, 0.42)
+                .setDepth(15)
+                .setVisible(false),
+            this.add
+                .rectangle(480, 544, 3, 360, 0xb5953a, 0.42)
                 .setDepth(15)
                 .setVisible(false),
         ];
 
         this.emailPanelTitle = this.add
-            .text(560, 189, "Email Monitor", {
+            .text(560, 189, "EMAIL MONITOR", {
                 fontSize: "24px",
                 color: "#f4ecd8",
                 fontStyle: "bold",
@@ -512,7 +842,7 @@ export class Level1 extends Scene {
 
         this.emailCloseXText = this.add
             .text(965, 202, " X", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "24px",
                 color: "#ff2222",
                 fontStyle: "bold",
@@ -522,16 +852,16 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.emailSwitchText = this.add
-            .text(560, 236, "", {
+            .text(572, 238, "", {
                 fontSize: "16px",
-                color: "#5b4f3e",
+                color: "#8bcf7b",
             })
             .setDepth(16)
             .setVisible(false);
 
         this.previousEmailButton = this.createButton(
-            790,
-            236,
+            815,
+            250,
             "< Prev",
             "#5f6359",
             () => {
@@ -544,8 +874,8 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.nextEmailButton = this.createButton(
-            900,
-            236,
+            925,
+            250,
             "Next >",
             "#5f6359",
             () => {
@@ -558,9 +888,9 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.fromText = this.add
-            .text(560, 276, "", {
+            .text(572, 268, "", {
                 fontSize: "17px",
-                color: "#2a251c",
+                color: "#d8f1c7",
                 wordWrap: { width: 430 },
                 lineSpacing: 4,
             })
@@ -568,18 +898,18 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.domainText = this.add
-            .text(560, 312, "", {
+            .text(572, 294, "", {
                 fontSize: "17px",
-                color: "#2a251c",
+                color: "#b8d9a8",
                 wordWrap: { width: 430 },
             })
             .setDepth(16)
             .setVisible(false);
 
         this.subjectText = this.add
-            .text(560, 348, "", {
+            .text(572, 336, "", {
                 fontSize: "17px",
-                color: "#2a251c",
+                color: "#d8f1c7",
                 wordWrap: { width: 430 },
                 lineSpacing: 4,
             })
@@ -587,27 +917,29 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.contentLabelText = this.add
-            .text(560, 392, "Content:", {
+            .text(576, 405, "Content:", {
                 fontSize: "17px",
-                color: "#2a251c",
+                color: "#8bcf7b",
             })
             .setDepth(16)
             .setVisible(false);
 
         this.contentText = this.add
-            .text(560, 422, "", {
+            .text(576, 434, "", {
                 fontSize: "16px",
-                color: "#2a251c",
-                wordWrap: { width: 430 },
+                color: "#d8f1c7",
+                wordWrap: { width: 380 },
+                fixedWidth: 380,
+                fixedHeight: 126,
                 lineSpacing: 6,
             })
             .setDepth(16)
             .setVisible(false);
 
         this.attachmentText = this.add
-            .text(560, 594, "", {
+            .text(576, 579, "", {
                 fontSize: "16px",
-                color: "#2a251c",
+                color: "#f0d990",
                 wordWrap: { width: 430 },
                 lineSpacing: 4,
             })
@@ -615,18 +947,20 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.powerupStatusText = this.add
-            .text(560, 632, "", {
-                fontSize: "14px",
-                color: "#5a4a32",
-                wordWrap: { width: 430 },
+            .text(770, 612, "", {
+                fontSize: "13px",
+                color: "#b8d9a8",
+                align: "center",
+                wordWrap: { width: 380 },
                 lineSpacing: 4,
             })
+            .setOrigin(0.5)
             .setDepth(16)
             .setVisible(false);
 
         this.hintButton = this.createButton(
-            630,
-            672,
+            670,
+            650,
             "Hint",
             "#66563b",
             () => {
@@ -638,8 +972,8 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.revealButton = this.createButton(
-            810,
-            672,
+            870,
+            650,
             "Eliminate",
             "#66563b",
             () => {
@@ -652,7 +986,7 @@ export class Level1 extends Scene {
 
         this.validButton = this.createButton(
             675,
-            716,
+            724,
             "Valid",
             "#44624c",
             () => {
@@ -665,7 +999,7 @@ export class Level1 extends Scene {
 
         this.phishingButton = this.createButton(
             865,
-            716,
+            724,
             "Phishing",
             "#7a3e36",
             () => {
@@ -677,7 +1011,7 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookTitleText = this.add
-            .text(50, 186, "Rules", {
+            .text(48, 186, "Rulebook", {
                 fontSize: "28px",
                 color: "#f4ecd8",
                 fontStyle: "bold",
@@ -686,8 +1020,8 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulesCloseXText = this.add
-            .text(445, 202, " X", {
-                fontFamily: "Pix32",
+            .text(475, 202, " X", {
+                fontFamily: "Dotemp-8bit",
                 fontSize: "24px",
                 color: "#ff2222",
                 fontStyle: "bold",
@@ -697,143 +1031,202 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         this.rulebookCoreButton = this.createButton(
-            140,
+            112,
             244,
-            "Core",
+            "Basics",
             "#66563b",
             () => {
                 this.showRulebookPageByTitle("Core Rules");
             },
-            78,
+            116,
         )
             .setDepth(16)
             .setVisible(false);
 
         this.rulebookRosterButton = this.createButton(
-            248,
+            256,
             244,
-            "Roster",
+            "Content",
             "#66563b",
             () => {
-                this.showRulebookPageByTitle("RedForge");
+                this.showRulebookPageByTitle("Core Rules: Content");
             },
-            96,
+            116,
         )
             .setDepth(16)
             .setVisible(false);
 
         this.rulebookTodayButton = this.createButton(
-            370,
+            400,
             244,
             "Today",
             "#66563b",
             () => {
                 this.showRulebookPageByTitle(`Day ${this.day} Alerts`);
             },
-            90,
+            116,
         )
             .setDepth(16)
             .setVisible(false);
 
+        this.rulebookCompanyLabelText = this.add
+            .text(48, 270, "Company roster", {
+                fontSize: "15px",
+                color: "#5a4a32",
+            })
+            .setDepth(16)
+            .setVisible(false);
+
         const companyLabels = [
-            { button: "RedF", page: "RedForge" },
-            { button: "BlueP", page: "BluePeak" },
-            { button: "NorthS", page: "NorthStar" },
-            { button: "StoneG", page: "StoneGate" },
-            { button: "ClearP", page: "ClearPath" },
-            { button: "IronC", page: "IronClad" },
+            { button: "RedForge", page: "RedForge" },
+            { button: "BluePeak", page: "BluePeak" },
+            { button: "NorthStar", page: "NorthStar" },
+            { button: "StoneGate", page: "StoneGate" },
+            { button: "ClearPath", page: "ClearPath" },
+            { button: "IronClad", page: "IronClad" },
         ];
         this.companyRuleButtons = companyLabels.map((company, index) =>
             this.createButton(
-                88 + index * 67,
-                292,
+                120 + (index % 3) * 145,
+                312 + Math.floor(index / 3) * 42,
                 company.button,
                 "#4d5f55",
                 () => {
                     this.showRulebookPageByTitle(company.page);
                 },
-                62,
+                128,
             )
                 .setDepth(16)
                 .setVisible(false),
         );
 
         this.rulebookPageText = this.add
-            .text(44, 330, "", {
-                fontSize: "20px",
+            .text(58, 382, "", {
+                fontSize: "19px",
                 color: "#5a4a32",
-                wordWrap: { width: 410 },
+                wordWrap: { width: 432 },
             })
             .setDepth(16)
             .setVisible(false);
 
         this.rulebookBodyText = this.add
-            .text(51.5, 366, "", {
-                fontSize: "15px",
+            .text(58, 418, "", {
+                fontSize: "16px",
                 color: "#2a251c",
-                wordWrap: { width: 410 },
-                lineSpacing: 4,
+                wordWrap: { width: 432 },
+                lineSpacing: 3,
             })
             .setDepth(16)
             .setVisible(false);
 
         this.previousRulePageButton = this.createButton(
-            145,
+            160,
             734,
-            "< Page",
+            "< Prev",
             "#66563b",
             () => {
                 this.showPreviousRulePage();
             },
-            130,
+            140,
         )
             .setDepth(16)
             .setVisible(false);
 
         this.nextRulePageButton = this.createButton(
-            365,
+            370,
             734,
-            "Page >",
+            "Next >",
             "#66563b",
             () => {
                 this.showNextRulePage();
             },
-            130,
+            140,
         )
             .setDepth(16)
             .setVisible(false);
 
+        this.endDayShopFrame = [
+            this.add
+                .rectangle(512, 386, 710, 545, 0xf0e4c4, 0.98)
+                .setStrokeStyle(3, 0x7a6030)
+                .setDepth(51)
+                .setVisible(false),
+            this.add
+                .rectangle(512, 174, 710, 88, 0x1b3022, 1)
+                .setStrokeStyle(2, 0xb5953a)
+                .setDepth(52)
+                .setVisible(false),
+            this.add
+                .rectangle(512, 218, 710, 4, 0xd4a830, 1)
+                .setDepth(52)
+                .setVisible(false),
+            this.add
+                .rectangle(512, 398, 565, 210, 0xe8d9a8, 0.96)
+                .setStrokeStyle(2, 0xb5953a)
+                .setDepth(52)
+                .setVisible(false),
+            this.add
+                .rectangle(512, 545, 710, 4, 0xd4a830, 0.8)
+                .setDepth(52)
+                .setVisible(false),
+        ];
+
         this.endDayTitle = this.add
-            .text(512, 260, "", {
-                fontSize: "42px",
+            .text(512, 174, "", {
+                fontSize: "40px",
                 color: "#f4ecd8",
                 fontStyle: "bold",
             })
             .setOrigin(0.5)
-            .setDepth(20)
+            .setDepth(53)
+            .setVisible(false);
+
+        this.endDayPromptText = this.add
+            .text(512, 254, "", {
+                fontSize: "22px",
+                color: "#2f4b36",
+                align: "center",
+                wordWrap: { width: 650 },
+                lineSpacing: 6,
+            })
+            .setOrigin(0.5)
+            .setDepth(53)
             .setVisible(false);
 
         this.endDaySummary = this.add
-            .text(512, 350, "", {
+            .text(512, 398, "", {
                 fontSize: "26px",
-                color: "#efe4c7",
+                color: "#433927",
                 align: "center",
-                wordWrap: { width: 700 },
-                lineSpacing: 8,
+                wordWrap: { width: 520 },
+                lineSpacing: 10,
             })
             .setOrigin(0.5)
-            .setDepth(20)
+            .setDepth(53)
             .setVisible(false);
 
         this.toShopButton = this.createButton(
             512,
-            460,
+            606,
             "Enter Shop",
             "#44624c",
             () => {
                 this.enterShop();
             },
-            240,
+            270,
+        )
+            .setDepth(60)
+            .setVisible(false);
+
+        this.endDayViolationButton = this.createButton(
+            512,
+            548,
+            "View Violations",
+            "#7a3e36",
+            () => {
+                this.showViolationLog(true);
+            },
+            230,
         )
             .setDepth(60)
             .setVisible(false);
@@ -868,7 +1261,8 @@ export class Level1 extends Scene {
             "#4d5f55",
             () => {
                 this.timerValue = 300;
-                this.scene.start("Level1", {
+                clearSavedRun();
+                this.startSceneAfterFade("Level1", {
                     day: 1,
                     totalPoints: 0,
                     money: 0,
@@ -906,6 +1300,80 @@ export class Level1 extends Scene {
         )
             .setDepth(51)
             .setVisible(false);
+
+        this.tutorialPopupBg = this.add
+            .rectangle(512, 384, 1024, 768, 0x090d09, 0.62)
+            .setDepth(80)
+            .setInteractive()
+            .setVisible(false);
+
+        this.tutorialPopupPanel = this.add
+            .rectangle(512, 384, 720, 400, 0xf0e4c4, 0.99)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(81)
+            .setVisible(false);
+
+        this.tutorialPopupTitle = this.add
+            .text(512, 230, "", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "28px",
+                color: "#2f4b36",
+                fontStyle: "bold",
+                align: "center",
+                wordWrap: { width: 660 },
+            })
+            .setOrigin(0.5)
+            .setDepth(82)
+            .setVisible(false);
+
+        this.tutorialPopupBody = this.add
+            .text(512, 380, "", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "18px",
+                color: "#2a251c",
+                align: "center",
+                wordWrap: { width: 640 },
+                lineSpacing: 6,
+            })
+            .setOrigin(0.5)
+            .setDepth(82)
+            .setVisible(false);
+
+        this.tutorialPopupBeginButton = this.createButton(
+            512,
+            540,
+            "Begin",
+            "#44624c",
+            () => {
+                this.acknowledgeTutorialPopup();
+            },
+            200,
+        )
+            .setDepth(83)
+            .setVisible(false);
+    }
+
+    private showTutorialPopup(popup: TutorialPopup, onBegin: () => void) {
+        this.pendingTutorialAction = onBegin;
+        this.tutorialPopupTitle.setText(popup.title);
+        this.tutorialPopupBody.setText(popup.body);
+        this.tutorialPopupBg.setVisible(true);
+        this.tutorialPopupPanel.setVisible(true);
+        this.tutorialPopupTitle.setVisible(true);
+        this.tutorialPopupBody.setVisible(true);
+        this.tutorialPopupBeginButton.setVisible(true);
+    }
+
+    private acknowledgeTutorialPopup() {
+        if (!this.tutorialPopupBg.visible) return;
+        const action = this.pendingTutorialAction;
+        this.pendingTutorialAction = null;
+        this.tutorialPopupBg.setVisible(false);
+        this.tutorialPopupPanel.setVisible(false);
+        this.tutorialPopupTitle.setVisible(false);
+        this.tutorialPopupBody.setVisible(false);
+        this.tutorialPopupBeginButton.setVisible(false);
+        action?.();
     }
 
     private buildInterruptUI() {
@@ -914,7 +1382,7 @@ export class Level1 extends Scene {
             .setDisplaySize(1024, 768)
             .setDepth(25)
             .setVisible(false);
-        
+
         this.zombieSprite = this.add
             .image(512, 384, "zombie")
             .setDisplaySize(1024, 768)
@@ -945,6 +1413,7 @@ export class Level1 extends Scene {
             .setVisible(false);
         this.crosshair = this.add
             .image(512, 384, "crosshair")
+            .setOrigin(0.5)
             .setDepth(49)
             .setVisible(false);
         /*
@@ -954,7 +1423,7 @@ export class Level1 extends Scene {
             .setVisible(false);
         */
         this.zombieZone = this.add
-            .zone(250, 250, 250, 250)
+            .zone(512, 384, 260, 320)
             .setDepth(49)
             .setVisible(false);
 
@@ -984,8 +1453,8 @@ export class Level1 extends Scene {
         const centerY = 348;
 
         this.panel = this.add
-            .rectangle(centerX, centerY, 240, 280, 0xD8CFAF)
-            .setStrokeStyle(2, 0x6E644A)
+            .rectangle(centerX, centerY, 240, 280, 0xd8cfaf)
+            .setStrokeStyle(2, 0x6e644a)
             .setDepth(26)
             .setVisible(false)
             .setAlpha(0.95);
@@ -994,24 +1463,145 @@ export class Level1 extends Scene {
         const startY = centerY - 40; // top row
         const spacing = 50;
 
-        this.button1 = this.createButton(startX, startY, "1", "#4E6A57", () => { this.addPinDigit("1"); }, 40).setDepth(27).setVisible(false);
-        this.button2 = this.createButton(startX + spacing, startY, "2", "#4E6A57", () => { this.addPinDigit("2"); }, 40).setDepth(27).setVisible(false);
-        this.button3 = this.createButton(startX + spacing * 2, startY, "3", "#4E6A57", () => { this.addPinDigit("3"); }, 40).setDepth(27).setVisible(false);
+        this.button1 = this.createButton(
+            startX,
+            startY,
+            "1",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("1");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.button2 = this.createButton(
+            startX + spacing,
+            startY,
+            "2",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("2");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.button3 = this.createButton(
+            startX + spacing * 2,
+            startY,
+            "3",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("3");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
 
-        this.button4 = this.createButton(startX, startY + spacing, "4", "#4E6A57", () => { this.addPinDigit("4"); }, 40).setDepth(27).setVisible(false);
-        this.button5 = this.createButton(startX + spacing, startY + spacing, "5", "#4E6A57", () => { this.addPinDigit("5"); }, 40).setDepth(27).setVisible(false);
-        this.button6 = this.createButton(startX + spacing * 2, startY + spacing, "6", "#4E6A57", () => { this.addPinDigit("6"); }, 40).setDepth(27).setVisible(false);
+        this.button4 = this.createButton(
+            startX,
+            startY + spacing,
+            "4",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("4");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.button5 = this.createButton(
+            startX + spacing,
+            startY + spacing,
+            "5",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("5");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.button6 = this.createButton(
+            startX + spacing * 2,
+            startY + spacing,
+            "6",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("6");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
 
-        this.button7 = this.createButton(startX, startY + spacing * 2, "7", "#4E6A57", () => { this.addPinDigit("7"); }, 40).setDepth(27).setVisible(false);
-        this.button8 = this.createButton(startX + spacing, startY + spacing * 2, "8", "#4E6A57", () => { this.addPinDigit("8"); }, 40).setDepth(27).setVisible(false);
-        this.button9 = this.createButton(startX + spacing * 2, startY + spacing * 2, "9", "#4E6A57", () => { this.addPinDigit("9"); }, 40).setDepth(27).setVisible(false);
+        this.button7 = this.createButton(
+            startX,
+            startY + spacing * 2,
+            "7",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("7");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.button8 = this.createButton(
+            startX + spacing,
+            startY + spacing * 2,
+            "8",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("8");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.button9 = this.createButton(
+            startX + spacing * 2,
+            startY + spacing * 2,
+            "9",
+            "#4E6A57",
+            () => {
+                this.addPinDigit("9");
+            },
+            40,
+        )
+            .setDepth(27)
+            .setVisible(false);
 
-        this.buttonEnter = this.createButton(startX, startY + spacing * 3, "Enter", "#4E6A57", () => { this.submitPin(); }, 70).setDepth(27).setVisible(false);
-        this.buttonBackspace = this.createButton(startX + spacing * 2, startY + spacing * 3, "Delete", "#4E6A57", () => { this.deletePinDigit(); }, 70).setDepth(27).setVisible(false);
+        this.buttonEnter = this.createButton(
+            startX,
+            startY + spacing * 3,
+            "Enter",
+            "#4E6A57",
+            () => {
+                this.submitPin();
+            },
+            70,
+        )
+            .setDepth(27)
+            .setVisible(false);
+        this.buttonBackspace = this.createButton(
+            startX + spacing * 2,
+            startY + spacing * 3,
+            "Delete",
+            "#4E6A57",
+            () => {
+                this.deletePinDigit();
+            },
+            70,
+        )
+            .setDepth(27)
+            .setVisible(false);
 
         this.panelDisplay = this.add
             .text(centerX, startY - spacing, this.inputPassword, {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#f8f0dc",
                 stroke: "#211d17",
@@ -1025,7 +1615,6 @@ export class Level1 extends Scene {
             .setDepth(27)
             .setVisible(false);
 
-
         this.interruptBarBg = this.add
             .rectangle(512, 640, 700, 36, 0x2a2a2a)
             .setStrokeStyle(2, 0xffffff)
@@ -1037,7 +1626,7 @@ export class Level1 extends Scene {
             .setVisible(false);
         this.interruptText = this.add
             .text(512, 640, "Ignore conversation. Spam Space!", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "20px",
                 color: "#ffffff",
                 align: "center",
@@ -1047,6 +1636,79 @@ export class Level1 extends Scene {
             .setVisible(false);
 
         // Plot dialogue panel — themed box that replaces the distraction bar
+        this.captchaBg = this.add
+            .rectangle(512, 384, 1024, 768, 0x090d09, 0.52)
+            .setDepth(60)
+            .setInteractive()
+            .setVisible(false);
+
+        this.captchaPanel = this.add
+            .rectangle(512, 384, 620, 390, 0xf0e4c4, 0.98)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(61)
+            .setVisible(false);
+
+        this.captchaTitleText = this.add
+            .text(512, 236, "CAPTCHA TEST", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "34px",
+                color: "#2f4b36",
+                fontStyle: "bold",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(62)
+            .setVisible(false);
+
+        this.captchaPromptText = this.add
+            .text(512, 282, "Verify you're still human.", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "20px",
+                color: "#433927",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(62)
+            .setVisible(false);
+
+        this.captchaNoise = this.add.graphics().setDepth(62).setVisible(false);
+
+        this.captchaInputText = this.add
+            .text(512, 452, "", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "28px",
+                color: "#f8f0dc",
+                backgroundColor: "#2f4b36",
+                fixedWidth: 360,
+                align: "center",
+                padding: { left: 10, right: 10, top: 12, bottom: 12 },
+            })
+            .setOrigin(0.5)
+            .setDepth(63)
+            .setVisible(false);
+
+        this.captchaTimerText = this.add
+            .text(512, 514, "", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "18px",
+                color: "#7a2d25",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(62)
+            .setVisible(false);
+
+        this.captchaHintText = this.add
+            .text(512, 552, "Type the code, then press Enter.", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "16px",
+                color: "#5a4a32",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(62)
+            .setVisible(false);
+
         this.plotDialogPanel = this.add
             .rectangle(512, 643, 740, 116, 0x1b3022)
             .setStrokeStyle(2, 0xb5953a)
@@ -1060,7 +1722,7 @@ export class Level1 extends Scene {
 
         this.dudePlotText = this.add
             .text(512, 618, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#f4ecd8",
                 align: "center",
@@ -1072,7 +1734,7 @@ export class Level1 extends Scene {
 
         this.plotDialogOkButton = this.add
             .text(512, 682, "  OK  ", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#f4ecd8",
                 backgroundColor: "#2f4b36",
@@ -1095,8 +1757,14 @@ export class Level1 extends Scene {
             this.plotDialogOkButton.setStyle({ backgroundColor: "#2f4b36" });
         });
 
+        this.input.keyboard?.on("keydown", this.handleCaptchaKeyDown);
+
         this.input.keyboard?.on("keydown-SPACE", () => {
-            if (!this.interruptActive || this.isPlotInterrupt) {
+            if (
+                !this.interruptActive ||
+                this.isPlotInterrupt ||
+                this.captchaActive
+            ) {
                 return;
             }
 
@@ -1120,7 +1788,7 @@ export class Level1 extends Scene {
         const hoverColor = this.brightenColor(backgroundColor, 20);
         const button = this.add
             .text(x, y, label, {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#f8f0dc",
                 stroke: "#211d17",
@@ -1131,8 +1799,7 @@ export class Level1 extends Scene {
                 padding: { left: 8, right: 8, top: 10, bottom: 10 },
             })
             .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .setShadow(0, 2, "#000000", 6, true, true);
+            .setInteractive({ useHandCursor: true });
 
         button.on("pointerdown", onClick);
         button.on("pointerover", () => {
@@ -1164,6 +1831,13 @@ export class Level1 extends Scene {
             this.moneyText,
             this.progressText,
             this.feedbackText,
+            this.violationLogButton,
+            this.violationNoticeTitle,
+            this.violationNoticeFromText,
+            this.violationNoticeReasonText,
+            this.violationLogTitle,
+            this.violationLogBody,
+            this.violationLogCloseButton,
             this.emailPanelTitle,
             this.fromText,
             this.domainText,
@@ -1185,11 +1859,14 @@ export class Level1 extends Scene {
             this.rulebookCoreButton,
             this.rulebookRosterButton,
             this.rulebookTodayButton,
+            this.rulebookCompanyLabelText,
             ...this.companyRuleButtons,
             this.validButton,
             this.phishingButton,
             this.endDayTitle,
+            this.endDayPromptText,
             this.endDaySummary,
+            this.endDayViolationButton,
             this.toShopButton,
             this.finalTitle,
             this.finalSummary,
@@ -1197,7 +1874,7 @@ export class Level1 extends Scene {
         ];
 
         for (const textObject of uiText) {
-            textObject.setFontFamily("Pix32");
+            textObject.setFontFamily("Dotemp-8bit");
         }
     }
 
@@ -1216,6 +1893,22 @@ export class Level1 extends Scene {
         this.computerPanelOpen = false;
         this.filesPanelOpen = false;
         this.revealedEmails = new WeakSet<EmailCase>();
+        this.interruptChanceMultiplier = 1;
+        this.dayViolations = [];
+        saveRun({
+            day: this.day,
+            totalPoints: this.totalPoints,
+            money: this.money,
+            daysWithoutRent: this.daysWithoutRent,
+            hintCount: this.hintCount,
+            revealCount: this.revealCount,
+            shieldActive: this.shieldActive,
+            plotEmailsAccepted: this.plotEmailsAccepted,
+            plotEmailsRejected: this.plotEmailsRejected,
+        });
+        this.hideViolationNotice();
+        this.showViolationLog(false);
+        this.refreshViolationLogButton();
 
         const dayPlan = this.getDayPlan();
         this.rulebookPages = getRulebookPages(dayPlan);
@@ -1262,7 +1955,140 @@ export class Level1 extends Scene {
         return DAYS[this.day - 1] ?? DAYS[DAYS.length - 1];
     }
 
+    private startTutorial() {
+        this.clearArrivalTimers();
+        this.clearInterrupt();
+        this.clearStatusTimers();
+
+        this.day = 1;
+        this.dayPoints = 0;
+        this.emailsProcessed = 0;
+        this.inboxEmails = [];
+        this.pendingArrivalEmails = [];
+        this.selectedInboxIndex = -1;
+        this.hasUnreadNotification = false;
+        this.computerPanelOpen = false;
+        this.filesPanelOpen = false;
+        this.revealedEmails = new WeakSet<EmailCase>();
+        this.interruptChanceMultiplier = 1;
+        this.dayViolations = [];
+        this.hideViolationNotice();
+        this.showViolationLog(false);
+        this.refreshViolationLogButton();
+
+        const tutorialPlan: DayPlan = {
+            day: 1,
+            focus: "Example round. Sender, domain, topic, and attachment checks.",
+            dailyRules: ["No special daily alerts during this example round."],
+            emails: TUTORIAL_EMAILS,
+        };
+        this.rulebookPages = getRulebookPages(tutorialPlan);
+        this.rulebookPageIndex = 0;
+        this.refreshRulebook();
+
+        this.tutorialEmailIndex = 0;
+        this.tutorialPhase = "emails1";
+        this.totalEmailsForDay = TUTORIAL_EMAILS.length;
+
+        this.showTriageUI(true);
+        this.showEndDayUI(false);
+        this.showFinalUI(false);
+        this.updatePanelVisibility();
+
+        this.setStatusBar(
+            "Example Round. Watch the prompts and follow each step.",
+            "#2c271f",
+        );
+
+        this.refreshEmailPanel();
+        this.refreshPowerupUI();
+        this.refreshTopBar();
+        this.refreshProgressText();
+
+        this.time.delayedCall(400, () => {
+            this.showTutorialPopup(TUTORIAL_POPUPS.email1, () =>
+                this.deliverTutorialEmail(),
+            );
+        });
+    }
+
+    private deliverTutorialEmail() {
+        if (
+            !this.tutorialMode ||
+            this.tutorialEmailIndex >= TUTORIAL_EMAILS.length
+        ) {
+            return;
+        }
+
+        const email = TUTORIAL_EMAILS[this.tutorialEmailIndex];
+        this.inboxEmails.push(email);
+        playOneShot(this, SOUND_KEYS.emailNoti, { volume: 0.2 });
+
+        if (this.selectedInboxIndex < 0) {
+            this.selectedInboxIndex = 0;
+        }
+        if (!this.computerPanelOpen) {
+            this.hasUnreadNotification = true;
+        }
+
+        this.setStatusBar(
+            `New email arrived. Inbox: ${this.inboxEmails.length}. Click the computer to review.`,
+            "#7a2d25",
+        );
+
+        this.refreshDeskTextures();
+        this.refreshProgressText();
+        if (this.computerPanelOpen) {
+            this.refreshEmailPanel();
+            this.refreshPowerupUI();
+        }
+    }
+
+    private advanceTutorialAfterClassification() {
+        if (!this.tutorialMode) {
+            return;
+        }
+
+        this.tutorialEmailIndex += 1;
+
+        const queuePopup = (popup: TutorialPopup, onBegin: () => void) => {
+            const statusDelay = Math.min(
+                800,
+                Math.max(0, this.feedbackHoldUntilMs - this.time.now),
+            );
+            const violationDelay = Math.max(
+                0,
+                this.violationNoticeHoldUntilMs - this.time.now,
+            );
+            const delay = Math.max(statusDelay, violationDelay, 600);
+            this.time.delayedCall(delay, () => {
+                if (!this.tutorialMode) return;
+                this.showTutorialPopup(popup, onBegin);
+            });
+        };
+
+        if (this.tutorialEmailIndex === 1) {
+            queuePopup(TUTORIAL_POPUPS.email2, () =>
+                this.deliverTutorialEmail(),
+            );
+            return;
+        }
+
+        if (this.tutorialEmailIndex === 2) {
+            this.tutorialPhase = "awaiting-coworker";
+            queuePopup(TUTORIAL_POPUPS.coworker, () => this.startInterrupt());
+        }
+    }
+
+    private shouldForceZombieInterrupts() {
+        return false;
+    }
+
     private startInterruptRolls() {
+        if (this.tutorialMode) {
+            return;
+        }
+
         this.interruptRollTimer = this.time.addEvent({
             delay: 5000,
             loop: true,
@@ -1270,12 +2096,25 @@ export class Level1 extends Scene {
                 if (!this.triageVisible || this.interruptActive) {
                     return;
                 }
-                const f = Phaser.Math.FloatBetween(0, 1);
-                console.log(f);
-                if (f <= .1 && f >= .025) {
-                    this.startInterrupt();
-                } else if (f < .025) {
+                if (this.shouldForceZombieInterrupts()) {
+                    this.interruptChanceMultiplier *= 0.66;
                     this.startInterruptZombie();
+                    return;
+                }
+
+                const f = Phaser.Math.FloatBetween(0, 1);
+                const zombieChance = 0.025 * this.interruptChanceMultiplier;
+                const captchaChance = 0.04 * this.interruptChanceMultiplier;
+                const totalChance = 0.12 * this.interruptChanceMultiplier;
+                if (f < zombieChance) {
+                    this.interruptChanceMultiplier *= 0.66;
+                    this.startInterruptZombie();
+                } else if (f < zombieChance + captchaChance) {
+                    this.interruptChanceMultiplier *= 0.66;
+                    this.startCaptchaInterrupt();
+                } else if (f < totalChance) {
+                    this.interruptChanceMultiplier *= 0.66;
+                    this.startInterrupt();
                 }
             },
         });
@@ -1321,6 +2160,221 @@ export class Level1 extends Scene {
         });
     }
 
+    private startCaptchaInterrupt() {
+        if (!this.triageVisible || this.interruptActive) {
+            return;
+        }
+
+        this.interruptActive = true;
+        this.captchaActive = true;
+        this.captchaCode = this.generateCaptchaCode();
+        this.captchaInput = "";
+        this.captchaTimeRemaining = 18;
+
+        this.computerPanelOpen = false;
+        this.filesPanelOpen = false;
+        this.updatePanelVisibility();
+
+        this.drawCaptchaCode();
+        this.refreshCaptchaInput();
+        this.refreshCaptchaTimer();
+        this.setCaptchaVisible(true);
+        playOneShot(this, SOUND_KEYS.emailNoti, { volume: 0.2 });
+
+        this.captchaTimer = this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => {
+                if (!this.captchaActive) {
+                    return;
+                }
+
+                this.captchaTimeRemaining -= 1;
+                this.refreshCaptchaTimer();
+
+                if (this.captchaTimeRemaining <= 0) {
+                    playOneShot(this, SOUND_KEYS.wrongBuzzer, {
+                        volume: 0.55,
+                    });
+                    if (this.tutorialMode) {
+                        this.setStatusBar(
+                            "Out of time in the example. CAPTCHA will return during real shifts.",
+                            "#7a2d25",
+                            { holdMs: 2500 },
+                        );
+                        this.endCaptchaInterrupt();
+                        return;
+                    }
+                    this.totalPoints -= 1;
+                    this.dayPoints -= 1;
+                    this.money -= 5;
+                    this.refreshTopBar();
+                    this.setStatusBar(
+                        "CAPTCHA failed. Verification penalty: -1 point, -$5.",
+                        "#7a2d25",
+                        { holdMs: 2500 },
+                    );
+                    this.endCaptchaInterrupt();
+                }
+            },
+        });
+    }
+
+    private generateCaptchaCode() {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+
+        for (let i = 0; i < 6; i++) {
+            code += chars[Phaser.Math.Between(0, chars.length - 1)];
+        }
+
+        return code;
+    }
+
+    private drawCaptchaCode() {
+        this.clearCaptchaCodeText();
+        this.captchaNoise.clear();
+
+        this.captchaNoise.fillStyle(0xd8cfaf, 1);
+        this.captchaNoise.fillRect(306, 318, 412, 86);
+        this.captchaNoise.lineStyle(2, 0x7a6030, 0.65);
+        this.captchaNoise.strokeRect(306, 318, 412, 86);
+
+        for (let i = 0; i < 16; i++) {
+            this.captchaNoise.lineStyle(
+                Phaser.Math.Between(1, 3),
+                Phaser.Utils.Array.GetRandom([0x2f4b36, 0x7a6030, 0x7a2d25]),
+                Phaser.Math.FloatBetween(0.22, 0.5),
+            );
+            this.captchaNoise.beginPath();
+            this.captchaNoise.moveTo(
+                Phaser.Math.Between(320, 700),
+                Phaser.Math.Between(326, 396),
+            );
+            this.captchaNoise.lineTo(
+                Phaser.Math.Between(320, 700),
+                Phaser.Math.Between(326, 396),
+            );
+            this.captchaNoise.strokePath();
+        }
+
+        const colors = ["#2f4b36", "#7a2d25", "#5a4a32", "#1b3022"];
+        for (let i = 0; i < this.captchaCode.length; i++) {
+            const letter = this.add
+                .text(
+                    352 + i * 64,
+                    Phaser.Math.Between(348, 368),
+                    this.captchaCode[i],
+                    {
+                        fontFamily: "Dotemp-8bit",
+                        fontSize: `${Phaser.Math.Between(34, 44)}px`,
+                        color: Phaser.Utils.Array.GetRandom(colors),
+                        stroke: "#f4ecd8",
+                        strokeThickness: 1,
+                    },
+                )
+                .setOrigin(0.5)
+                .setRotation(Phaser.Math.FloatBetween(-0.38, 0.38))
+                .setScale(
+                    Phaser.Math.FloatBetween(0.9, 1.15),
+                    Phaser.Math.FloatBetween(0.85, 1.2),
+                )
+                .setDepth(63)
+                .setVisible(this.captchaActive);
+            this.captchaCodeTexts.push(letter);
+        }
+    }
+
+    private clearCaptchaCodeText() {
+        for (const textObject of this.captchaCodeTexts) {
+            textObject.destroy();
+        }
+        this.captchaCodeTexts = [];
+    }
+
+    private refreshCaptchaInput() {
+        const display = this.captchaInput.padEnd(6, "_").split("").join(" ");
+        this.captchaInputText.setText(display);
+    }
+
+    private refreshCaptchaTimer() {
+        this.captchaTimerText.setText(
+            `Time remaining: ${this.captchaTimeRemaining}s`,
+        );
+    }
+
+    private submitCaptcha() {
+        if (!this.captchaActive) {
+            return;
+        }
+
+        if (this.captchaInput === this.captchaCode) {
+            playOneShot(this, SOUND_KEYS.correctDing, { volume: 0.45 });
+            this.setStatusBar("CAPTCHA passed. Back to work.", "#2f4b36", {
+                holdMs: 1600,
+            });
+            this.endCaptchaInterrupt();
+            return;
+        }
+
+        playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.5 });
+        this.captchaInput = "";
+        this.refreshCaptchaInput();
+        this.captchaHintText.setText("Incorrect. Type the code exactly.");
+    }
+
+    private setCaptchaVisible(visible: boolean) {
+        this.captchaBg.setVisible(visible);
+        this.captchaPanel.setVisible(visible);
+        this.captchaTitleText.setVisible(visible);
+        this.captchaPromptText.setVisible(visible);
+        this.captchaNoise.setVisible(visible);
+        this.captchaInputText.setVisible(visible);
+        this.captchaTimerText.setVisible(visible);
+        this.captchaHintText.setVisible(visible);
+        for (const textObject of this.captchaCodeTexts) {
+            textObject.setVisible(visible);
+        }
+    }
+
+    private endCaptchaInterrupt() {
+        const wasActive = this.captchaActive;
+        this.captchaActive = false;
+        this.interruptActive = false;
+        this.captchaInput = "";
+        this.captchaCode = "";
+        this.captchaHintText.setText("Type the code, then press Enter.");
+
+        if (this.captchaTimer) {
+            this.captchaTimer.remove(false);
+            this.captchaTimer = null;
+        }
+
+        this.setCaptchaVisible(false);
+        this.captchaNoise.clear();
+        this.clearCaptchaCodeText();
+
+        if (wasActive && this.awaitingPlotInterruptEnd) {
+            this.awaitingPlotInterruptEnd = false;
+            this.scheduleNextEmailArrival();
+            this.startInterruptRolls();
+        }
+
+        if (
+            wasActive &&
+            this.tutorialMode &&
+            this.tutorialPhase === "awaiting-captcha"
+        ) {
+            this.tutorialPhase = "awaiting-zombie";
+            this.time.delayedCall(900, () => {
+                if (!this.tutorialMode) return;
+                this.showTutorialPopup(TUTORIAL_POPUPS.zombie, () =>
+                    this.startInterruptZombie(),
+                );
+            });
+        }
+    }
+
     private playPinClick() {
         playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
     }
@@ -1329,14 +2383,14 @@ export class Level1 extends Scene {
         this.playPinClick();
         if (this.inputPassword.length < 4) {
             this.inputPassword += digit;
-            this.panelDisplay.setText(this.inputPassword);
+            this.panelDisplay.setText(this.formatPassword(this.inputPassword));
         }
     }
 
     private deletePinDigit() {
         this.playPinClick();
         this.inputPassword = this.inputPassword.slice(0, -1);
-        this.panelDisplay.setText(this.inputPassword);
+        this.panelDisplay.setText(this.formatPassword(this.inputPassword));
     }
 
     private submitPin() {
@@ -1345,7 +2399,7 @@ export class Level1 extends Scene {
     }
 
     private checkPassword() {
-        console.log(this.inputPassword + ' -> ' + this.todaysPassword);
+        console.log(this.inputPassword + " -> " + this.todaysPassword);
         if (this.inputPassword === this.todaysPassword) {
             this.inputPassword = "";
             this.panelDisplay.setVisible(false);
@@ -1367,6 +2421,10 @@ export class Level1 extends Scene {
         }
     }
 
+    private formatPassword(password: string) {
+        return password.split("").join("-");
+    }
+
     private startInterruptZombie() {
         console.log("Starting zombie interrupt");
         if (!this.triageVisible || this.interruptActive) {
@@ -1386,8 +2444,11 @@ export class Level1 extends Scene {
         this.filesPanelOpen = false;
         this.updatePanelVisibility();
         this.gunDoorPanelZone.removeAllListeners("pointerdown");
-        this.gunDoorPanelZone.setVisible(true).setPosition(512, 384).setInteractive();
-        this.gunDoorPanelZone.once('pointerdown', () => {
+        this.gunDoorPanelZone
+            .setVisible(true)
+            .setPosition(512, 384)
+            .setInteractive();
+        this.gunDoorPanelZone.once("pointerdown", () => {
             console.log("Gun door panel clicked");
             this.gunDoorPanelZone.disableInteractive();
             this.inputPassword = "";
@@ -1408,10 +2469,14 @@ export class Level1 extends Scene {
         });
 
         let timeRemaining = 20;
-        this.zombieTimerText = this.add.text(512, 30, `Time: ${timeRemaining}s`, {
-            fontSize: '24px',
-            color: '#ff0000',
-        }).setOrigin(0.5).setDepth(100);
+        this.zombieTimerText = this.add
+            .text(592, 30, `Time: ${timeRemaining}s`, {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "24px",
+                color: "#ff0000",
+            })
+            .setOrigin(0.5)
+            .setDepth(100);
 
         this.zombieCountdownTimer = this.time.addEvent({
             delay: 1000,
@@ -1424,13 +2489,20 @@ export class Level1 extends Scene {
                 timeRemaining--;
                 this.zombieTimerText?.setText(`Time: ${timeRemaining}s`);
                 if (timeRemaining <= 0) {
-                    const message = "You have been Infected!";
                     playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
+                    if (this.tutorialMode) {
+                        this.setStatusBar(
+                            "Out of time in the example. We'll skip ahead — remember the steps for the real shift.",
+                            "#7a2d25",
+                        );
+                        this.endInterruptZombie();
+                        return;
+                    }
+                    const message = "You have been Infected!";
                     this.endInterruptZombie();
-                    this.finalSummary.setText(`${message}\n\nPress Restart to play again.`);
-                    this.showFinalUI(true);
+                    this.showEnding("Game Over", message);
                 }
-            }
+            },
         });
         this.interruptTick = this.time.addEvent({
             delay: 120,
@@ -1445,18 +2517,30 @@ export class Level1 extends Scene {
                     this.gunDoorOpenSprite.setVisible(true);
                     this.gunZone.removeAllListeners("pointerdown");
                     this.gunZone.setVisible(true).setInteractive();
-                    this.gunZone.once('pointerdown', () => {
+                    this.gunZone.once("pointerdown", () => {
                         this.gunZone.disableInteractive();
                         this.gunDoorOpenSprite.setVisible(false);
                         this.gunZone.setVisible(false);
                         this.gunTakenSprite.setVisible(true);
                         this.crosshair.setVisible(true);
-                        this.input.off('pointermove', this.updateCrosshairPosition);
-                        this.input.on('pointermove', this.updateCrosshairPosition);
+                        this.crosshair.setPosition(
+                            this.input.activePointer.worldX,
+                            this.input.activePointer.worldY,
+                        );
+                        this.input.off(
+                            "pointermove",
+                            this.updateCrosshairPosition,
+                        );
+                        this.input.on(
+                            "pointermove",
+                            this.updateCrosshairPosition,
+                        );
                         this.zombieZone.removeAllListeners("pointerdown");
                         this.zombieZone.setVisible(true).setInteractive();
-                        this.zombieZone.once('pointerdown', () => {
-                            playOneShot(this, SOUND_KEYS.shot, { volume: 0.7 });
+                        this.zombieZone.once("pointerdown", () => {
+                            playOneShot(this, SOUND_KEYS.shot, {
+                                volume: 0.35,
+                            });
                             this.zombieZone.disableInteractive();
                             this.endInterruptZombie();
                         });
@@ -1515,9 +2599,20 @@ export class Level1 extends Scene {
             this.scheduleNextEmailArrival();
             this.startInterruptRolls();
         }
+
+        if (this.tutorialMode && this.tutorialPhase === "awaiting-coworker") {
+            this.tutorialPhase = "awaiting-captcha";
+            this.time.delayedCall(900, () => {
+                if (!this.tutorialMode) return;
+                this.showTutorialPopup(TUTORIAL_POPUPS.captcha, () =>
+                    this.startCaptchaInterrupt(),
+                );
+            });
+        }
     }
 
     private endInterruptZombie() {
+        const wasActive = this.interruptActive;
         this.interruptActive = false;
         //stopSound(this, SOUND_KEYS.zombieNoise);
         this.clearZombieTimer();
@@ -1549,7 +2644,21 @@ export class Level1 extends Scene {
         this.button9.setVisible(false);
         this.buttonEnter.setVisible(false);
         this.buttonBackspace.setVisible(false);
-        this.input.off('pointermove', this.updateCrosshairPosition);
+        this.input.off("pointermove", this.updateCrosshairPosition);
+
+        if (
+            wasActive &&
+            this.tutorialMode &&
+            this.tutorialPhase === "awaiting-zombie"
+        ) {
+            this.tutorialPhase = "emails2";
+            this.time.delayedCall(1400, () => {
+                if (!this.tutorialMode) return;
+                this.showTutorialPopup(TUTORIAL_POPUPS.email3, () =>
+                    this.deliverTutorialEmail(),
+                );
+            });
+        }
     }
 
     private clearZombieTimer() {
@@ -1586,6 +2695,7 @@ export class Level1 extends Scene {
         this.plotDialogAccent.setVisible(false);
         this.dudePlotText.setVisible(false);
         this.plotDialogOkButton.setVisible(false);
+        this.endCaptchaInterrupt();
         this.endInterruptZombie();
     }
 
@@ -1652,13 +2762,28 @@ export class Level1 extends Scene {
             this.dayFinishTimer = null;
         }
 
+        if (this.feedbackAlertTween) {
+            this.feedbackAlertTween.stop();
+            this.feedbackAlertTween = null;
+        }
+
+        if (this.violationNoticeTimer) {
+            this.violationNoticeTimer.remove(false);
+            this.violationNoticeTimer = null;
+        }
+
         this.feedbackHoldUntilMs = 0;
+        this.violationNoticeHoldUntilMs = 0;
     }
 
     private setStatusBar(
         message: string,
         color: string,
-        options: { holdMs?: number; waitForHold?: boolean } = {},
+        options: {
+            holdMs?: number;
+            waitForHold?: boolean;
+            alert?: boolean;
+        } = {},
     ) {
         const remainingHoldMs = this.feedbackHoldUntilMs - this.time.now;
 
@@ -1682,6 +2807,7 @@ export class Level1 extends Scene {
             this.deferredFeedbackTimer = null;
         }
 
+        this.setFeedbackBarAlert(options.alert === true);
         this.feedbackText.setText(message).setColor(color);
         this.feedbackHoldUntilMs =
             options.holdMs && options.holdMs > 0 ?
@@ -1689,15 +2815,189 @@ export class Level1 extends Scene {
             :   0;
     }
 
+    private setFeedbackBarAlert(alert: boolean) {
+        if (this.feedbackAlertTween) {
+            this.feedbackAlertTween.stop();
+            this.feedbackAlertTween = null;
+        }
+
+        this.feedbackBar.setAlpha(1);
+
+        if (alert) {
+            this.feedbackBar
+                .setPosition(512, 158)
+                .setSize(920, 76)
+                .setFillStyle(0xf4d2c8, 1)
+                .setStrokeStyle(3, 0xa83328);
+            this.feedbackText.setPosition(74, 128).setStyle({
+                fontSize: "17px",
+                wordWrap: { width: 860 },
+                lineSpacing: 4,
+            });
+            this.feedbackAlertTween = this.tweens.add({
+                targets: this.feedbackBar,
+                alpha: 0.45,
+                duration: 90,
+                yoyo: true,
+                repeat: 3,
+                onComplete: () => {
+                    this.feedbackBar.setAlpha(1);
+                    this.feedbackAlertTween = null;
+                },
+            });
+            return;
+        }
+
+        this.feedbackBar
+            .setPosition(512, 144)
+            .setSize(920, 42)
+            .setFillStyle(0xf0e4c4, 0.97)
+            .setStrokeStyle(2, 0x7a6030);
+        this.feedbackText.setPosition(74, 130).setStyle({
+            fontSize: "20px",
+            wordWrap: { width: 860 },
+            lineSpacing: 4,
+        });
+    }
+
+    private recordViolation(email: EmailCase): DayViolation {
+        const violation = {
+            index: this.dayViolations.length + 1,
+            from: email.from,
+            domain: email.domain,
+            subject: email.subject,
+            correctType: email.type,
+            reason: this.getMistakeReason(email),
+        };
+
+        this.dayViolations.push(violation);
+        return violation;
+    }
+
+    private showViolationNotice(violation: DayViolation) {
+        if (this.violationNoticeTimer) {
+            this.violationNoticeTimer.remove(false);
+        }
+
+        this.showViolationLog(false);
+        this.refreshViolationLogButton();
+        this.violationNoticeTitle.setText(`Violation ${violation.index}`);
+        this.violationNoticeFromText.setText(
+            `From: ${violation.from} <${violation.domain}>\nSubject: ${violation.subject}`,
+        );
+        this.violationNoticeReasonText.setText(
+            `Correct answer: ${this.formatEmailType(violation.correctType)}\nReason: ${violation.reason}`,
+        );
+        this.setViolationNoticeVisible(true);
+        this.violationNoticeHoldUntilMs =
+            this.time.now + this.classificationFeedbackHoldMs;
+
+        this.tweens.add({
+            targets: this.violationNoticePanel,
+            alpha: 0.55,
+            duration: 90,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => {
+                this.violationNoticePanel.setAlpha(1);
+            },
+        });
+
+        this.violationNoticeTimer = this.time.delayedCall(
+            this.classificationFeedbackHoldMs,
+            () => {
+                this.violationNoticeTimer = null;
+                this.hideViolationNotice();
+            },
+        );
+    }
+
+    private hideViolationNotice() {
+        this.setViolationNoticeVisible(false);
+        this.violationNoticeHoldUntilMs = 0;
+        this.refreshViolationLogButton();
+    }
+
+    private setViolationNoticeVisible(visible: boolean) {
+        this.violationNoticeBg.setVisible(visible);
+        this.violationNoticePanel.setVisible(visible);
+        this.violationNoticeTitle.setVisible(visible);
+        this.violationNoticeFromText.setVisible(visible);
+        this.violationNoticeReasonText.setVisible(visible);
+    }
+
+    private showViolationLog(visible: boolean) {
+        const shouldShow = visible && this.dayViolations.length > 0;
+        this.violationLogBg.setVisible(shouldShow);
+        this.violationLogPanel.setVisible(shouldShow);
+        this.violationLogTitle.setVisible(shouldShow);
+        this.violationLogBody.setVisible(shouldShow);
+        this.violationLogCloseButton.setVisible(shouldShow);
+
+        if (shouldShow) {
+            this.violationLogBody.setText(this.formatViolationLog());
+        }
+
+        this.refreshViolationLogButton();
+    }
+
+    private refreshViolationLogButton() {
+        const noticeVisible = this.violationNoticeBg.visible;
+        const logVisible = this.violationLogBg.visible;
+        const hasViolations = this.dayViolations.length > 0;
+        const shouldShow = this.triageVisible && !noticeVisible && !logVisible;
+
+        this.violationLogButton
+            .setVisible(shouldShow)
+            .setAlpha(hasViolations ? 1 : 0.45)
+            .setStyle({
+                backgroundColor: hasViolations ? "#7a3e36" : "#5f6359",
+            });
+
+        if (shouldShow && hasViolations) {
+            this.violationLogButton.setInteractive({ useHandCursor: true });
+        } else {
+            this.violationLogButton.disableInteractive();
+        }
+    }
+
+    private formatViolationLog() {
+        return this.dayViolations
+            .map((violation) => {
+                const reason = this.truncateForLog(violation.reason, 82);
+                return `${violation.index}. ${violation.from} <${violation.domain}> - ${this.formatEmailType(
+                    violation.correctType,
+                )}: ${reason}`;
+            })
+            .join("\n");
+    }
+
+    private truncateForLog(text: string, maxLength: number) {
+        if (text.length <= maxLength) {
+            return text;
+        }
+
+        return `${text.slice(0, maxLength - 3)}...`;
+    }
+
+    private formatEmailType(type: EmailType) {
+        return type === "valid" ? "Valid" : "Phishing";
+    }
+
     private scheduleFinishDayAfterStatusHold() {
         if (this.dayFinishTimer) {
             this.dayFinishTimer.remove(false);
         }
 
-        const delay = Math.min(
+        const statusDelay = Math.min(
             800,
             Math.max(0, this.feedbackHoldUntilMs - this.time.now),
         );
+        const violationDelay = Math.max(
+            0,
+            this.violationNoticeHoldUntilMs - this.time.now,
+        );
+        const delay = Math.max(statusDelay, violationDelay);
         this.dayFinishTimer = this.time.delayedCall(delay, () => {
             this.dayFinishTimer = null;
             this.finishDay();
@@ -1708,7 +3008,7 @@ export class Level1 extends Scene {
         const inboxCount = this.inboxEmails.length;
 
         if (inboxCount === 0) {
-            this.emailPanelTitle.setText("Email Monitor");
+            this.emailPanelTitle.setText("EMAIL MONITOR");
             this.emailSwitchText.setText("Inbox empty");
             this.fromText.setText("From: --");
             this.domainText.setText("Domain: --");
@@ -1730,7 +3030,7 @@ export class Level1 extends Scene {
         }
 
         const current = this.inboxEmails[this.selectedInboxIndex];
-        this.emailPanelTitle.setText("Email Monitor");
+        this.emailPanelTitle.setText("EMAIL MONITOR");
         this.emailSwitchText.setText(
             `Showing ${this.selectedInboxIndex + 1}/${inboxCount} (Queued: ${inboxCount})`,
         );
@@ -1854,6 +3154,59 @@ export class Level1 extends Scene {
         return "Review the sender, domain, attachments, and today's special rules.";
     }
 
+    private getMistakeReason(email: EmailCase): string {
+        const violation = email.violations[0] ?? "";
+        const v = violation.toLowerCase();
+
+        if (!violation) {
+            return "It matched the sender, domain, topic, and attachment rules.";
+        }
+        if (v.includes("username does not match")) {
+            return "The sender name did not match the email address username.";
+        }
+        if (v.includes("maps to")) {
+            return "That username belongs to a different employee.";
+        }
+        if (v.includes(".exe")) {
+            return "The attachment was an .exe file, which is always banned.";
+        }
+        if (v.includes(".zip")) {
+            return "The attachment was a .zip file, which is always banned.";
+        }
+        if (v.includes(".pdf")) {
+            return "PDF attachments are banned by today's rules.";
+        }
+        if (v.includes("attachment does not match")) {
+            return "The attachment did not match the email subject or body.";
+        }
+        if (v.includes("subject and body")) {
+            return "The subject and body were about different topics.";
+        }
+        if (v.includes("not an approved")) {
+            return "The sender used a domain that is not approved for that company.";
+        }
+        if (v.includes("does not work at")) {
+            return "That person does not work at the company in the address.";
+        }
+        if (v.includes("blocked") || v.includes("restricted")) {
+            return "Today's rules say this sender or company is blocked.";
+        }
+        if (v.includes("topic from wrong")) {
+            return "That topic belongs to a different company category today.";
+        }
+        if (v.includes("credential") || v.includes("verification")) {
+            return "It asked for credentials or account verification.";
+        }
+        if (v.includes("weather") || v.includes("banned word")) {
+            return "Today's rules block that subject or topic.";
+        }
+
+        const cutoff = violation.indexOf("Expected:");
+        return cutoff > 0 ?
+                violation.slice(0, cutoff).trim().replace(/\.$/, "")
+            :   violation.replace(/\.$/, "");
+    }
+
     private useReveal() {
         const currentEmail = this.getCurrentEmail();
         if (!currentEmail) {
@@ -1923,25 +3276,22 @@ export class Level1 extends Scene {
         } else if (this.shieldActive) {
             playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
             this.shieldActive = false;
+            const violation = this.recordViolation(currentEmail);
+            this.showViolationNotice(violation);
             this.setStatusBar(
-                `Shield absorbed the mistake. This email was ${currentEmail.type}.`,
+                `Shield absorbed violation ${violation.index}. Review the notice.`,
                 "#5a4a32",
                 { holdMs: this.classificationFeedbackHoldMs },
             );
         } else {
             playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.45 });
-            const firstViolation = currentEmail.violations[0] ?? "";
-            const cutoff = firstViolation.indexOf("Expected:");
-            const shortViolation =
-                cutoff > 0 ?
-                    firstViolation.slice(0, cutoff).trim().replace(/\.$/, "")
-                :   firstViolation;
-            const reasonText = shortViolation ? ` — ${shortViolation}.` : ".";
+            const violation = this.recordViolation(currentEmail);
+            this.showViolationNotice(violation);
             this.totalPoints -= 1;
             this.dayPoints -= 1;
             this.money -= 5;
             this.setStatusBar(
-                `Incorrect (${currentEmail.type})${reasonText} -1 point.`,
+                `Violation ${violation.index} recorded: -1 point.`,
                 "#7a2d25",
                 { holdMs: this.classificationFeedbackHoldMs },
             );
@@ -1971,6 +3321,8 @@ export class Level1 extends Scene {
 
         if (this.emailsProcessed >= this.totalEmailsForDay) {
             this.scheduleFinishDayAfterStatusHold();
+        } else {
+            this.advanceTutorialAfterClassification();
         }
     }
 
@@ -2010,20 +3362,43 @@ export class Level1 extends Scene {
 
     private refreshRulebook() {
         const page = this.rulebookPages[this.rulebookPageIndex];
+        const { position, total } = this.getRulebookSectionPosition(page);
         this.rulebookPageText.setText(
-            `${page.title} (${this.rulebookPageIndex + 1}/${this.rulebookPages.length})`,
+            `${page.title} - Page ${position}/${total}`,
         );
         this.rulebookBodyText.setText(page.body);
         this.refreshRulebookControls(page);
     }
 
+    private getRulebookSectionPosition(page: RulebookPage) {
+        if (page.companyIndex !== undefined) {
+            const companyPages = this.rulebookPages.filter(
+                (p) => p.companyIndex !== undefined,
+            );
+            return {
+                position: page.companyIndex + 1,
+                total: companyPages.length,
+            };
+        }
+        if (page.title === `Day ${this.day} Alerts`) {
+            return { position: 1, total: 1 };
+        }
+        const coreTitles = ["Core Rules", "Core Rules: Content"];
+        const corePages = this.rulebookPages.filter((p) =>
+            coreTitles.includes(p.title),
+        );
+        const position = corePages.findIndex((p) => p.title === page.title) + 1;
+        return { position, total: corePages.length };
+    }
+
     private refreshRulebookControls(page: RulebookPage) {
-        const isCore = page.title.startsWith("Core Rules");
+        const isCore = page.title === "Core Rules";
+        const isContent = page.title === "Core Rules: Content";
         const isToday = page.title === `Day ${this.day} Alerts`;
         const isRoster = page.companyIndex !== undefined;
 
         this.rulebookCoreButton.setAlpha(isCore ? 1 : 0.72);
-        this.rulebookRosterButton.setAlpha(isRoster ? 1 : 0.72);
+        this.rulebookRosterButton.setAlpha(isContent ? 1 : 0.72);
         this.rulebookTodayButton.setAlpha(isToday ? 1 : 0.72);
 
         this.companyRuleButtons.forEach((button, index) => {
@@ -2031,6 +3406,8 @@ export class Level1 extends Scene {
                 .setVisible(this.filesPanelOpen)
                 .setAlpha(page.companyIndex === index ? 1 : 0.72);
         });
+
+        this.rulebookCompanyLabelText.setAlpha(isRoster ? 1 : 0.72);
     }
 
     private refreshProgressText() {
@@ -2104,6 +3481,7 @@ export class Level1 extends Scene {
         this.rulebookCoreButton.setVisible(showFilesPanel);
         this.rulebookRosterButton.setVisible(showFilesPanel);
         this.rulebookTodayButton.setVisible(showFilesPanel);
+        this.rulebookCompanyLabelText.setVisible(showFilesPanel);
         for (const button of this.companyRuleButtons) {
             button.setVisible(showFilesPanel);
         }
@@ -2120,6 +3498,22 @@ export class Level1 extends Scene {
         this.clearInterrupt();
         this.shieldActive = false;
 
+        if (this.tutorialMode) {
+            this.tutorialPhase = "done";
+            this.startSceneAfterFade("Shop", {
+                day: 1,
+                money: this.money,
+                totalPoints: this.totalPoints,
+                daysWithoutRent: 0,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
+                plotEmailsAccepted: 0,
+                plotEmailsRejected: 0,
+                tutorialMode: true,
+            });
+            return;
+        }
+
         const dayPay = this.dayPoints * 5;
         this.refreshTopBar();
 
@@ -2132,11 +3526,15 @@ export class Level1 extends Scene {
 
         this.showEndDayUI(true);
 
-        this.endDayTitle.setText(`Day ${this.day} Complete`);
+        this.endDayTitle.setText("Supply Window Open");
+        this.endDayPromptText.setText(
+            `Day ${this.day} shift complete. Stop by shop before next round.`,
+        );
         this.endDaySummary.setText(
-            `Day points: ${this.dayPoints}\n` +
-                `Daily pay: $${dayPay}\n` +
-                `Current money: $${this.money}`,
+            "END-OF-SHIFT RECEIPT\n\n" +
+                `Day ${this.day} points: ${this.dayPoints}\n` +
+                `Payout posted: $${dayPay}\n` +
+                `Wallet balance: $${this.money}`,
         );
 
         this.feedbackText
@@ -2147,7 +3545,7 @@ export class Level1 extends Scene {
     }
 
     private enterShop() {
-        this.scene.start("Shop", {
+        this.startSceneAfterFade("Shop", {
             day: this.day,
             money: this.money,
             totalPoints: this.totalPoints,
@@ -2156,6 +3554,16 @@ export class Level1 extends Scene {
             revealCount: this.revealCount,
             plotEmailsAccepted: this.plotEmailsAccepted,
             plotEmailsRejected: this.plotEmailsRejected,
+        });
+    }
+
+    private startSceneAfterFade(sceneKey: string, data?: object) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            // Keep the screen black between scenes; avoids a 1-frame flash
+            // where UI can reappear after the fade effect completes.
+            this.cameras.main.setVisible(false);
+            this.scene.start(sceneKey, data);
         });
     }
 
@@ -2172,11 +3580,13 @@ export class Level1 extends Scene {
 
         stopSound(this, SOUND_KEYS.dudeNoise);
         stopSound(this, SOUND_KEYS.fanAudio);
+        clearSavedRun();
         this.scene.start("Ending", { endingType });
     }
 
     private showEnding(title: string, message: string) {
         stopSound(this, SOUND_KEYS.dudeNoise);
+        clearSavedRun();
         this.showTriageUI(false);
         this.showEndDayUI(false);
         this.showFinalUI(true);
@@ -2188,7 +3598,9 @@ export class Level1 extends Scene {
 
     private refreshTopBar() {
         this.headerText.setText(
-            `Email Inspector - Day ${this.day}/${MAX_DAYS}`,
+            this.tutorialMode ?
+                "Email Inspector - Example Round"
+            :   `Email Inspector - Day ${this.day}/${MAX_DAYS}`,
         );
         this.scoreText.setText(`Points: ${this.totalPoints}`);
         this.moneyText.setText(`Money: $${this.money}`);
@@ -2243,10 +3655,13 @@ export class Level1 extends Scene {
         if (!visible) {
             this.computerPanelOpen = false;
             this.filesPanelOpen = false;
+            this.showViolationLog(false);
+            this.hideViolationNotice();
         }
 
         this.updatePanelVisibility();
         this.refreshDeskTextures();
+        this.refreshViolationLogButton();
 
         if (!visible) {
             this.clearInterrupt();
@@ -2255,8 +3670,15 @@ export class Level1 extends Scene {
 
     private showEndDayUI(visible: boolean) {
         this.endScreenBg.setVisible(visible);
+        for (const frameObject of this.endDayShopFrame) {
+            frameObject.setVisible(visible);
+        }
         this.endDayTitle.setVisible(visible);
+        this.endDayPromptText.setVisible(visible);
         this.endDaySummary.setVisible(visible);
+        this.endDayViolationButton.setVisible(
+            visible && this.dayViolations.length > 0,
+        );
         this.toShopButton.setVisible(visible);
     }
 

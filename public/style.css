@@ -1,6 +1,6 @@
 @font-face {
-    font-family: "Pix32";
-    src: url("/src/game/fonts/Pix32.ttf") format("truetype");
+    font-family: "Dotemp-8bit";
+    src: url("/src/game/fonts/Dotemp-8bit.ttf") format("truetype");
     font-display: swap;
 }
 
@@ -22,7 +22,7 @@ body {
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
     background-color: #000000;
-    font-family: "Pix32", Arial, Helvetica, sans-serif;
+    font-family: "Dotemp-8bit", Arial, Helvetica, sans-serif;
     overflow: hidden;
 }
 

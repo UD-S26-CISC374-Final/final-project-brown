@@ -61,7 +61,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
 
         this.add
             .text(cardX, headerY, "Select a Day", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: 52,
                 color: "#f2e8d0",
                 stroke: "#0d180d",
@@ -94,7 +94,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
         const dayXPositions = [162, 337, 512, 687, 862];
 
         const dayStyle = {
-            fontFamily: "Pix32",
+            fontFamily: "Dotemp-8bit",
             fontSize: 26,
             color: "#2a3a2a",
             stroke: "#f0e8d4",
@@ -115,7 +115,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
-                    this.scene.start("Level1", { day });
+                    this.startSceneAfterFade("Level1", { day });
                 });
             return btn;
         };
@@ -133,7 +133,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
 
         this.add
             .text(cardX, dividerY, "— View Endings —", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: 20,
                 color: "#7a6040",
                 backgroundColor: "#f0e4c4",
@@ -146,7 +146,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
         // --- Ending buttons ---
         const endingY = dividerY + 54;
         const endingStyle = {
-            fontFamily: "Pix32",
+            fontFamily: "Dotemp-8bit",
             fontSize: 22,
             color: "#f4edd8",
             stroke: "#211d17",
@@ -167,7 +167,9 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
-                    this.scene.start("Level1", { endingPreview: preview });
+                    this.startSceneAfterFade("Level1", {
+                        endingPreview: preview,
+                    });
                 });
             return btn;
         };
@@ -180,7 +182,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
         const btnY = cardY + cardH / 2 - 46;
         const mainMenuButton = this.add
             .text(cardX, btnY, "Main Menu", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: 28,
                 color: "#f0e8d4",
                 stroke: "#1a2a1a",
@@ -232,5 +234,12 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 },
             });
         }
+    }
+
+    private startSceneAfterFade(sceneKey: string, data?: object) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start(sceneKey, data);
+        });
     }
 }

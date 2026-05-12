@@ -8,6 +8,7 @@ import {
 } from "../audio";
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
+import { clearSavedRun, loadSavedRun } from "../save-game";
 
 const W = 1024;
 const H = 768;
@@ -78,7 +79,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         // Title
         this.title = this.add
             .text(cardX, headerY, "Emails, Please", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: 70,
                 color: "#f2e8d0",
                 stroke: "#0d180d",
@@ -119,7 +120,7 @@ export class MainMenu extends Scene implements ChangeableScene {
 
         this.add
             .text(cardX, bodyTopY + 25, " SECURITY MAILROOM  —  NIGHT SHIFT ", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "18px",
                 color: "#f2e8d0",
                 align: "center",
@@ -130,24 +131,15 @@ export class MainMenu extends Scene implements ChangeableScene {
             .setDepth(10);
 
         // Blinking night badge
-        const nightBadge = this.add
+        this.add
             .text(cardX + 238, bodyTopY + 20, "●", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#c05030",
             })
             .setOrigin(0.5)
-            .setDepth(10);
-
-        this.tweens.add({
-            targets: nightBadge,
-            alpha: 0,
-            duration: 700,
-            ease: "Stepped",
-            easeParams: [1],
-            yoyo: true,
-            repeat: -1,
-        });
+            .setDepth(10)
+            .setVisible(false);
 
         // Separator
         const sepGfx = this.add.graphics().setDepth(5);
@@ -159,7 +151,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         // Tagline
         this.add
             .text(cardX, bodyTopY + 68, " Sort the inbox.  Survive 10 days. ", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
                 color: "#3a4e3e",
                 align: "center",
@@ -171,7 +163,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         // Flavor line
         this.add
             .text(cardX, bodyTopY + 105, "Night shift has just begun...", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#7a6848",
                 align: "center",
@@ -183,15 +175,27 @@ export class MainMenu extends Scene implements ChangeableScene {
         // --- Buttons ---
         const btnY = cardY + cardH / 2 - 54;
 
+        const savedRun = loadSavedRun();
+        const hasSavedRun = savedRun !== null;
+        const tutorialX = cardX - 262;
+        const startX = cardX - 96;
+        const continueX = cardX + 76;
+        const levelSelectX = cardX + 250;
+        const tutorialW = 145;
+        const startW = 155;
+        const continueW = 155;
+        const levelSelectW = 165;
+
         const tutorialButton = this.add
-            .text(cardX - 220, btnY, "Tutorial", {
-                fontFamily: "Pix32",
-                fontSize: 28,
+            .text(tutorialX, btnY, "Tutorial", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: 24,
                 color: "#f0e8d4",
                 stroke: "#1a2a1a",
                 strokeThickness: 1,
                 backgroundColor: "#3a5c42",
-                padding: { left: 24, right: 24, top: 10, bottom: 10 },
+                fixedWidth: tutorialW,
+                padding: { left: 8, right: 8, top: 10, bottom: 10 },
                 align: "center",
             })
             .setOrigin(0.5)
@@ -211,14 +215,15 @@ export class MainMenu extends Scene implements ChangeableScene {
             });
 
         const startButton = this.add
-            .text(cardX, btnY, "Start Shift", {
-                fontFamily: "Pix32",
-                fontSize: 32,
+            .text(startX, btnY, "New Game", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: 24,
                 color: "#2a3a2a",
                 stroke: "#f0e8d4",
                 strokeThickness: 1,
                 backgroundColor: "#d4a830",
-                padding: { left: 28, right: 28, top: 11, bottom: 11 },
+                fixedWidth: startW,
+                padding: { left: 8, right: 8, top: 11, bottom: 11 },
                 align: "center",
             })
             .setOrigin(0.5)
@@ -235,18 +240,63 @@ export class MainMenu extends Scene implements ChangeableScene {
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 stopSound(this, SOUND_KEYS.menuTheme);
-                this.scene.start("Level1", { day: 1 });
+                clearSavedRun();
+                // Start Shift goes straight into the example round.
+                // Tutorial slides are only shown via the Tutorial button.
+                this.startSceneAfterFade("Level1", { tutorialMode: true });
             });
 
+        const continueButton = this.add
+            .text(continueX, btnY, "Continue", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: 24,
+                color: hasSavedRun ? "#2a3a2a" : "#706b5d",
+                stroke: hasSavedRun ? "#f0e8d4" : "#c8b990",
+                strokeThickness: 1,
+                backgroundColor: hasSavedRun ? "#d4a830" : "#8b846f",
+                fixedWidth: continueW,
+                padding: { left: 8, right: 8, top: 11, bottom: 11 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(10)
+            .setAlpha(hasSavedRun ? 1 : 0.58);
+
+        if (hasSavedRun) {
+            continueButton
+                .setInteractive({ useHandCursor: true })
+                .on("pointerover", () => {
+                    continueButton.setStyle({ backgroundColor: "#e0bc50" });
+                    continueButton.setScale(1.05);
+                })
+                .on("pointerout", () => {
+                    continueButton.setStyle({ backgroundColor: "#d4a830" });
+                    continueButton.setScale(1);
+                })
+                .on("pointerdown", () => {
+                    const currentSave = loadSavedRun();
+
+                    if (!currentSave) {
+                        continueButton.setText("No Save");
+                        return;
+                    }
+
+                    playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                    stopSound(this, SOUND_KEYS.menuTheme);
+                    this.startSceneAfterFade("Level1", currentSave);
+                });
+        }
+
         const levelSelectButton = this.add
-            .text(cardX + 220, btnY, "Level Select", {
-                fontFamily: "Pix32",
-                fontSize: 22,
+            .text(levelSelectX, btnY, "Level Select", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: 20,
                 color: "#f0e8d4",
                 stroke: "#1a2a1a",
                 strokeThickness: 1,
                 backgroundColor: "#3a5c42",
-                padding: { left: 18, right: 18, top: 10, bottom: 10 },
+                fixedWidth: levelSelectW,
+                padding: { left: 8, right: 8, top: 10, bottom: 10 },
                 align: "center",
             })
             .setOrigin(0.5)
@@ -299,5 +349,12 @@ export class MainMenu extends Scene implements ChangeableScene {
                 },
             });
         }
+    }
+
+    private startSceneAfterFade(sceneKey: string, data?: object) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start(sceneKey, data);
+        });
     }
 }

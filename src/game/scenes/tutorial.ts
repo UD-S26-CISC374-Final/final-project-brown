@@ -42,11 +42,38 @@ export class Tutorial extends Scene {
                 "Correct calls earn points. Mistakes cost points.",
         },
         {
-            title: "The Dude",
+            title: "The Coworker",
             accent: "DISTRACTION EVENT",
             body:
-                "Sometimes the office dude barges into your focus. When he appears, your panels close and the distraction meter starts falling.\n\n" +
+                "A coworker from the next desk wanders over during the shift and starts talking your ear off. When he appears, your panels close and the distraction meter starts falling.\n\n" +
                 "Press Space repeatedly to ignore the conversation and get back to the inbox. If you freeze, the shift keeps moving while you lose control of the desk.",
+        },
+        {
+            title: "The CAPTCHA",
+            accent: "DISTRACTION EVENT",
+            body:
+                "Sometimes the system stops you with a human verification check during your shift.\n\n" +
+                "Read the distorted 6-character code, type it on your keyboard, then press Enter before time runs out. Backspace fixes mistakes.\n\n" +
+                "Pass the check to get back to work. If time runs out during a real shift, you lose points and money.",
+        },
+        {
+            title: "The Zombie",
+            accent: "DISTRACTION EVENT",
+            body:
+                "Sometimes a zombie breaks through the door during your shift. A 20-second countdown begins immediately.\n\n" +
+                "1. Note the password shown at the top of the screen.\n" +
+                "2. Click the gun cabinet on the wall to open the keypad.\n" +
+                "3. Enter the 4-digit password and press Enter.\n" +
+                "4. Grab the gun, then click the zombie to shoot it.\n\n" +
+                "If time runs out, you are infected and the shift ends.",
+        },
+        {
+            title: "The Dude",
+            accent: "VISITOR EVENT",
+            body:
+                "Every so often a stranger drops by your desk. He doesn't work for Blackline. He never gives his real name.\n\n" +
+                "He talks fast about the last analyst, about names that shouldn't be in the inbox, and about which emails to let through even when the rulebook says otherwise. Listen carefully — his hints point to the lore buried inside the email stream.\n\n" +
+                "He won't stop you from working, but the choices you make on flagged plot emails decide which ending you get.",
         },
         {
             title: "The Shop",
@@ -59,7 +86,6 @@ export class Tutorial extends Scene {
     ];
 
     private pageIndex = 0;
-    private practiceSolved = false;
 
     private titleText!: Phaser.GameObjects.Text;
     private accentText!: Phaser.GameObjects.Text;
@@ -70,7 +96,6 @@ export class Tutorial extends Scene {
     private nextButton!: Phaser.GameObjects.Text;
     private beginButton!: Phaser.GameObjects.Text;
     private mainMenuButton!: Phaser.GameObjects.Text;
-    private practiceGroup: Phaser.GameObjects.GameObject[] = [];
 
     constructor() {
         super("Tutorial");
@@ -96,7 +121,7 @@ export class Tutorial extends Scene {
 
         this.accentText = this.add
             .text(72, 34, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "17px",
                 color: "#d4a830",
             })
@@ -104,7 +129,7 @@ export class Tutorial extends Scene {
 
         this.titleText = this.add
             .text(72, 62, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "40px",
                 color: "#f2e8d0",
                 stroke: "#0d180d",
@@ -114,7 +139,7 @@ export class Tutorial extends Scene {
 
         this.pageText = this.add
             .text(W - 72, 76, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "18px",
                 color: "#b5953a",
                 align: "right",
@@ -145,8 +170,8 @@ export class Tutorial extends Scene {
         gfx.lineStyle(1, 0xc8a96e, 0.3);
         const lineTop = cardY - cardH / 2 + 22;
         for (let i = 0; i < 14; i++) {
-            gfx.moveTo(cardX - cardW / 2 + 28, lineTop + i * 37);
-            gfx.lineTo(cardX + cardW / 2 - 28, lineTop + i * 37);
+            gfx.moveTo(cardX - cardW / 2 + 28, lineTop + i * 34);
+            gfx.lineTo(cardX + cardW / 2 - 28, lineTop + i * 34);
         }
         gfx.strokePath();
 
@@ -159,7 +184,7 @@ export class Tutorial extends Scene {
         // --- Body text ---
         this.bodyText = this.add
             .text(90, 202, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
                 color: "#2c271f",
                 wordWrap: { width: 840 },
@@ -169,7 +194,7 @@ export class Tutorial extends Scene {
 
         this.statusText = this.add
             .text(W / 2, 623, "", {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "20px",
                 color: "#5a4a32",
                 align: "center",
@@ -185,10 +210,16 @@ export class Tutorial extends Scene {
         this.nextButton = this.createButton(828, 710, "Next >", () =>
             this.showNextPage(),
         );
-        this.beginButton = this.createButton(W / 2, 710, "Begin Shift", () => {
-            stopSound(this, SOUND_KEYS.menuTheme);
-            this.scene.start("Level1", { day: 1 });
-        });
+        this.beginButton = this.createButton(
+            W / 2,
+            710,
+            "Begin Example Round",
+            () => {
+                stopSound(this, SOUND_KEYS.menuTheme);
+                this.startSceneAfterFade("Level1", { tutorialMode: true });
+            },
+            260,
+        );
         this.mainMenuButton = this.createButton(196, 710, "Main Menu", () => {
             this.scene.start("MainMenu");
         });
@@ -206,7 +237,7 @@ export class Tutorial extends Scene {
     ) {
         const button = this.add
             .text(x, y, label, {
-                fontFamily: "Pix32",
+                fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
                 color: "#f0e8d4",
                 stroke: "#1a2a1a",
@@ -235,28 +266,35 @@ export class Tutorial extends Scene {
         return button;
     }
 
-    private showPage(index: number) {
-        this.pageIndex = Phaser.Math.Clamp(index, 0, this.pages.length);
-        this.clearPractice();
+    private startSceneAfterFade(sceneKey: string, data?: object) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start(sceneKey, data);
+        });
+    }
 
-        if (this.pageIndex >= this.pages.length) {
-            this.showPractice();
-            return;
-        }
+    private showPage(index: number) {
+        this.pageIndex = Phaser.Math.Clamp(index, 0, this.pages.length - 1);
 
         const page = this.pages[this.pageIndex];
         this.accentText.setText(page.accent);
         this.titleText.setText(page.title);
         this.bodyText.setText(page.body);
-        this.pageText.setText(
-            `${this.pageIndex + 1} / ${this.pages.length + 1}`,
-        );
-        this.statusText.setText("");
+        this.pageText.setText(`${this.pageIndex + 1} / ${this.pages.length}`);
 
-        this.previousButton.setVisible(this.pageIndex > 0);
-        this.mainMenuButton.setVisible(this.pageIndex === 0);
-        this.nextButton.setVisible(true).setText("Next >");
-        this.beginButton.setVisible(false);
+        const isLast = this.pageIndex === this.pages.length - 1;
+        const isFirst = this.pageIndex === 0;
+
+        this.statusText.setText(
+            isLast ?
+                "When you're ready, begin the example round to practice a short shift."
+            :   "",
+        );
+
+        this.previousButton.setVisible(!isFirst);
+        this.mainMenuButton.setVisible(isFirst);
+        this.nextButton.setVisible(!isLast);
+        this.beginButton.setVisible(isLast);
     }
 
     private showPreviousPage() {
@@ -264,98 +302,5 @@ export class Tutorial extends Scene {
     }
     private showNextPage() {
         this.showPage(this.pageIndex + 1);
-    }
-
-    private clearPractice() {
-        for (const item of this.practiceGroup) item.destroy();
-        this.practiceGroup = [];
-    }
-
-    private showPractice() {
-        this.accentText.setText("PRACTICE CASE");
-        this.titleText.setText("Make One Call");
-        this.pageText.setText(
-            `${this.pages.length + 1} / ${this.pages.length + 1}`,
-        );
-        this.bodyText.setText(
-            "Use the rulebook clue and classify the sample email before your first real shift.",
-        );
-        this.statusText.setText("Is this email valid or phishing?");
-        this.previousButton.setVisible(true);
-        this.mainMenuButton.setVisible(false);
-        this.nextButton.setVisible(false);
-        this.beginButton.setVisible(this.practiceSolved);
-
-        const rulebook = this.add
-            .text(
-                92,
-                256,
-                "RULEBOOK EXCERPT\n\nRedForge expected topics:\n- MFA, VPN, and account security\n- Incident response, SOC, and escalation\n- Firewalls, endpoint security, and threat hunting",
-                {
-                    fontFamily: "Pix32",
-                    fontSize: "18px",
-                    color: "#2c271f",
-                    backgroundColor: "#e8d9a8",
-                    padding: { left: 14, right: 14, top: 12, bottom: 12 },
-                    wordWrap: { width: 380 },
-                },
-            )
-            .setDepth(6);
-
-        const email = this.add
-            .text(
-                548,
-                256,
-                "EMAIL\n\nFrom: John Smith\nAddress: john@redforge.com\nSubject: Payroll Adjustment Needed\nAttachments: none\n\nBody:\nPlease review the payroll change form before Friday.",
-                {
-                    fontFamily: "Pix32",
-                    fontSize: "18px",
-                    color: "#2c271f",
-                    backgroundColor: "#f6edda",
-                    padding: { left: 14, right: 14, top: 12, bottom: 12 },
-                    wordWrap: { width: 374 },
-                },
-            )
-            .setDepth(6);
-
-        const validButton = this.createButton(
-            396,
-            560,
-            "Valid",
-            () => this.answerPractice(false),
-            164,
-            true,
-        );
-        const phishingButton = this.createButton(
-            628,
-            560,
-            "Phishing",
-            () => this.answerPractice(true),
-            164,
-            true,
-        );
-
-        this.practiceGroup.push(rulebook, email, validButton, phishingButton);
-    }
-
-    private answerPractice(correct: boolean) {
-        if (correct) {
-            this.practiceSolved = true;
-            playOneShot(this, SOUND_KEYS.correctDing, { volume: 0.5 });
-            this.statusText
-                .setText(
-                    "Correct. Payroll is not a RedForge topic. That makes it phishing.",
-                )
-                .setColor("#1f5c35");
-            this.beginButton.setVisible(true);
-            return;
-        }
-
-        playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
-        this.statusText
-            .setText(
-                "Not quite. RedForge does security work, not payroll, so this topic breaks the rulebook.",
-            )
-            .setColor("#7a2d25");
     }
 }
