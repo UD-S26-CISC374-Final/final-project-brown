@@ -4,6 +4,7 @@ import computerImage from "../objects/Computer.png";
 import computerHoverImage from "../objects/ComputerHover.png";
 import computerNotificationImage from "../objects/ComputerNotification.png";
 import computerNotificationHoverImage from "../objects/ComputerNotificationHover.png";
+import coworkerImage from "../objects/Coworker.png";
 import dudeImage from "../objects/Dude.png";
 import filesImage from "../objects/Files.png";
 import filesHoverImage from "../objects/FilesHover.png";
@@ -75,6 +76,7 @@ export class Preloader extends Scene {
             "desk-computer-notification-hover",
             computerNotificationHoverImage,
         );
+        this.load.image("desk-coworker", coworkerImage);
         this.load.image("desk-dude", dudeImage);
         this.load.image("desk-files", filesImage);
         this.load.image("desk-files-hover", filesHoverImage);

@@ -96,8 +96,8 @@ const TUTORIAL_POPUPS: Record<
     email3: {
         title: "Example Round: Email 3",
         body:
-            "One more email before the shift wraps up. We will not tell you whether it is valid or phishing this time.\n\n" +
-            "Hint: Open the rulebook and check the StoneGate company page.",
+            "One more email before the shift wraps up. This time, clicking an answer will trigger a CAPTCHA first.\n\n" +
+            "Complete the CAPTCHA, then click your answer again. Hint: Open the rulebook and check the StoneGate company page.",
     },
     coworker: {
         title: "Distraction Event: The Coworker",
@@ -106,10 +106,11 @@ const TUTORIAL_POPUPS: Record<
             "Mash the SPACE key to fill the bar and get him to leave.",
     },
     captcha: {
-        title: "Distraction Event: CAPTCHA",
+        title: "Email Check: CAPTCHA",
         body:
-            "Sometimes the system will stop you with a human verification check.\n\n" +
-            "Read the distorted 6-character code, type it on your keyboard, then press Enter before time runs out. Backspace fixes mistakes.",
+            "Sometimes clicking Valid or Phishing will trigger a human verification check before your answer goes through.\n\n" +
+            "Read the distorted 6-character code, type it on your keyboard, then press Enter before time runs out. Backspace fixes mistakes.\n\n" +
+            "After you pass it, click your answer again.",
     },
     zombie: {
         title: "Distraction Event: The Zombie",
@@ -182,6 +183,7 @@ export class Level1 extends Scene {
     private interruptProgress = 0;
     private interruptTick: Phaser.Time.TimerEvent | null = null;
     private interruptChanceMultiplier = 1;
+    private readonly captchaAnswerChance = 0.04;
     private countdownTimer: Phaser.Time.TimerEvent | null = null;
     private zombieCountdownTimer: Phaser.Time.TimerEvent | null = null;
     private zombieTimerText: Phaser.GameObjects.Text | null = null;
@@ -190,6 +192,8 @@ export class Level1 extends Scene {
     private captchaInput = "";
     private captchaTimer: Phaser.Time.TimerEvent | null = null;
     private captchaTimeRemaining = 0;
+    private captchaTriggeredEmails = new WeakSet<EmailCase>();
+    private captchaStartedFromAnswer = false;
 
     private triageVisible = true;
     private computerPanelOpen = false;
@@ -1637,14 +1641,14 @@ export class Level1 extends Scene {
 
         // Plot dialogue panel — themed box that replaces the distraction bar
         this.captchaBg = this.add
-            .rectangle(512, 384, 1024, 768, 0x090d09, 0.52)
+            .rectangle(512, 384, 1024, 768, 0x090d09, 0.62)
             .setDepth(60)
             .setInteractive()
             .setVisible(false);
 
         this.captchaPanel = this.add
-            .rectangle(512, 384, 620, 390, 0xf0e4c4, 0.98)
-            .setStrokeStyle(3, 0x7a6030)
+            .rectangle(512, 384, 620, 390, 0x0d1f17, 0.99)
+            .setStrokeStyle(3, 0x4d6a50)
             .setDepth(61)
             .setVisible(false);
 
@@ -1652,7 +1656,7 @@ export class Level1 extends Scene {
             .text(512, 236, "CAPTCHA TEST", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "34px",
-                color: "#2f4b36",
+                color: "#f4ecd8",
                 fontStyle: "bold",
                 align: "center",
             })
@@ -1664,7 +1668,7 @@ export class Level1 extends Scene {
             .text(512, 282, "Verify you're still human.", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "20px",
-                color: "#433927",
+                color: "#b8d9a8",
                 align: "center",
             })
             .setOrigin(0.5)
@@ -1677,8 +1681,8 @@ export class Level1 extends Scene {
             .text(512, 452, "", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "28px",
-                color: "#f8f0dc",
-                backgroundColor: "#2f4b36",
+                color: "#d8f1c7",
+                backgroundColor: "#08120d",
                 fixedWidth: 360,
                 align: "center",
                 padding: { left: 10, right: 10, top: 12, bottom: 12 },
@@ -1691,7 +1695,7 @@ export class Level1 extends Scene {
             .text(512, 514, "", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "18px",
-                color: "#7a2d25",
+                color: "#f0d990",
                 align: "center",
             })
             .setOrigin(0.5)
@@ -1702,7 +1706,7 @@ export class Level1 extends Scene {
             .text(512, 552, "Type the code, then press Enter.", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
-                color: "#5a4a32",
+                color: "#8bcf7b",
                 align: "center",
             })
             .setOrigin(0.5)
@@ -1893,6 +1897,7 @@ export class Level1 extends Scene {
         this.computerPanelOpen = false;
         this.filesPanelOpen = false;
         this.revealedEmails = new WeakSet<EmailCase>();
+        this.captchaTriggeredEmails = new WeakSet<EmailCase>();
         this.interruptChanceMultiplier = 1;
         this.dayViolations = [];
         saveRun({
@@ -1970,6 +1975,7 @@ export class Level1 extends Scene {
         this.computerPanelOpen = false;
         this.filesPanelOpen = false;
         this.revealedEmails = new WeakSet<EmailCase>();
+        this.captchaTriggeredEmails = new WeakSet<EmailCase>();
         this.interruptChanceMultiplier = 1;
         this.dayViolations = [];
         this.hideViolationNotice();
@@ -2104,14 +2110,10 @@ export class Level1 extends Scene {
 
                 const f = Phaser.Math.FloatBetween(0, 1);
                 const zombieChance = 0.025 * this.interruptChanceMultiplier;
-                const captchaChance = 0.04 * this.interruptChanceMultiplier;
                 const totalChance = 0.12 * this.interruptChanceMultiplier;
                 if (f < zombieChance) {
                     this.interruptChanceMultiplier *= 0.66;
                     this.startInterruptZombie();
-                } else if (f < zombieChance + captchaChance) {
-                    this.interruptChanceMultiplier *= 0.66;
-                    this.startCaptchaInterrupt();
                 } else if (f < totalChance) {
                     this.interruptChanceMultiplier *= 0.66;
                     this.startInterrupt();
@@ -2129,6 +2131,7 @@ export class Level1 extends Scene {
         this.interruptProgress = 0.3;
         ensureLoopingSound(this, SOUND_KEYS.dudeNoise, { volume: 0.32 });
 
+        this.dudeSprite.setTexture("desk-coworker");
         this.dudeSprite.setVisible(true);
         this.interruptBarBg.setVisible(true);
         this.interruptBarFill.setVisible(true);
@@ -2160,19 +2163,29 @@ export class Level1 extends Scene {
         });
     }
 
-    private startCaptchaInterrupt() {
+    private startCaptchaInterrupt(startedFromAnswer = false) {
         if (!this.triageVisible || this.interruptActive) {
             return;
         }
 
         this.interruptActive = true;
         this.captchaActive = true;
+        this.captchaStartedFromAnswer = startedFromAnswer;
         this.captchaCode = this.generateCaptchaCode();
         this.captchaInput = "";
         this.captchaTimeRemaining = 18;
+        this.captchaPromptText.setText(
+            startedFromAnswer ?
+                "Verify before sending your answer."
+            :   "Verify you're still human.",
+        );
 
-        this.computerPanelOpen = false;
-        this.filesPanelOpen = false;
+        if (startedFromAnswer) {
+            this.filesPanelOpen = false;
+        } else {
+            this.computerPanelOpen = false;
+            this.filesPanelOpen = false;
+        }
         this.updatePanelVisibility();
 
         this.drawCaptchaCode();
@@ -2180,6 +2193,13 @@ export class Level1 extends Scene {
         this.refreshCaptchaTimer();
         this.setCaptchaVisible(true);
         playOneShot(this, SOUND_KEYS.emailNoti, { volume: 0.2 });
+        if (startedFromAnswer) {
+            this.setStatusBar(
+                "Complete the CAPTCHA, then click your answer again.",
+                "#5a4a32",
+                { holdMs: 2200 },
+            );
+        }
 
         this.captchaTimer = this.time.addEvent({
             delay: 1000,
@@ -2235,15 +2255,15 @@ export class Level1 extends Scene {
         this.clearCaptchaCodeText();
         this.captchaNoise.clear();
 
-        this.captchaNoise.fillStyle(0xd8cfaf, 1);
+        this.captchaNoise.fillStyle(0x10281d, 1);
         this.captchaNoise.fillRect(306, 318, 412, 86);
-        this.captchaNoise.lineStyle(2, 0x7a6030, 0.65);
+        this.captchaNoise.lineStyle(2, 0x4d6a50, 0.9);
         this.captchaNoise.strokeRect(306, 318, 412, 86);
 
         for (let i = 0; i < 16; i++) {
             this.captchaNoise.lineStyle(
                 Phaser.Math.Between(1, 3),
-                Phaser.Utils.Array.GetRandom([0x2f4b36, 0x7a6030, 0x7a2d25]),
+                Phaser.Utils.Array.GetRandom([0x6fb76b, 0x4d6a50, 0xf0d990]),
                 Phaser.Math.FloatBetween(0.22, 0.5),
             );
             this.captchaNoise.beginPath();
@@ -2258,7 +2278,7 @@ export class Level1 extends Scene {
             this.captchaNoise.strokePath();
         }
 
-        const colors = ["#2f4b36", "#7a2d25", "#5a4a32", "#1b3022"];
+        const colors = ["#d8f1c7", "#8bcf7b", "#b8d9a8", "#f0d990"];
         for (let i = 0; i < this.captchaCode.length; i++) {
             const letter = this.add
                 .text(
@@ -2269,7 +2289,7 @@ export class Level1 extends Scene {
                         fontFamily: "Dotemp-8bit",
                         fontSize: `${Phaser.Math.Between(34, 44)}px`,
                         color: Phaser.Utils.Array.GetRandom(colors),
-                        stroke: "#f4ecd8",
+                        stroke: "#07120d",
                         strokeThickness: 1,
                     },
                 )
@@ -2309,7 +2329,6 @@ export class Level1 extends Scene {
         }
 
         if (this.captchaInput === this.captchaCode) {
-            playOneShot(this, SOUND_KEYS.correctDing, { volume: 0.45 });
             this.setStatusBar("CAPTCHA passed. Back to work.", "#2f4b36", {
                 holdMs: 1600,
             });
@@ -2339,11 +2358,14 @@ export class Level1 extends Scene {
 
     private endCaptchaInterrupt() {
         const wasActive = this.captchaActive;
+        const startedFromAnswer = this.captchaStartedFromAnswer;
         this.captchaActive = false;
         this.interruptActive = false;
+        this.captchaStartedFromAnswer = false;
         this.captchaInput = "";
         this.captchaCode = "";
         this.captchaHintText.setText("Type the code, then press Enter.");
+        this.captchaPromptText.setText("Verify you're still human.");
 
         if (this.captchaTimer) {
             this.captchaTimer.remove(false);
@@ -2353,6 +2375,14 @@ export class Level1 extends Scene {
         this.setCaptchaVisible(false);
         this.captchaNoise.clear();
         this.clearCaptchaCodeText();
+
+        if (wasActive && startedFromAnswer) {
+            this.computerPanelOpen = true;
+            this.filesPanelOpen = false;
+            this.updatePanelVisibility();
+            this.refreshEmailPanel();
+            this.refreshPowerupUI();
+        }
 
         if (wasActive && this.awaitingPlotInterruptEnd) {
             this.awaitingPlotInterruptEnd = false;
@@ -2365,11 +2395,13 @@ export class Level1 extends Scene {
             this.tutorialMode &&
             this.tutorialPhase === "awaiting-captcha"
         ) {
-            this.tutorialPhase = "awaiting-zombie";
-            this.time.delayedCall(900, () => {
+            this.tutorialPhase = "emails2";
+            this.time.delayedCall(350, () => {
                 if (!this.tutorialMode) return;
-                this.showTutorialPopup(TUTORIAL_POPUPS.zombie, () =>
-                    this.startInterruptZombie(),
+                this.setStatusBar(
+                    "CAPTCHA complete. Now click your answer again.",
+                    "#2f4b36",
+                    { holdMs: 2200 },
                 );
             });
         }
@@ -2559,6 +2591,7 @@ export class Level1 extends Scene {
         this.isPlotInterrupt = true;
         playOneShot(this, SOUND_KEYS.hey, { volume: 0.6 });
 
+        this.dudeSprite.setTexture("desk-dude");
         this.dudeSprite.setVisible(true);
         this.plotDialogPanel.setVisible(true);
         this.plotDialogAccent.setVisible(true);
@@ -2601,11 +2634,11 @@ export class Level1 extends Scene {
         }
 
         if (this.tutorialMode && this.tutorialPhase === "awaiting-coworker") {
-            this.tutorialPhase = "awaiting-captcha";
+            this.tutorialPhase = "awaiting-zombie";
             this.time.delayedCall(900, () => {
                 if (!this.tutorialMode) return;
-                this.showTutorialPopup(TUTORIAL_POPUPS.captcha, () =>
-                    this.startCaptchaInterrupt(),
+                this.showTutorialPopup(TUTORIAL_POPUPS.zombie, () =>
+                    this.startInterruptZombie(),
                 );
             });
         }
@@ -2651,7 +2684,7 @@ export class Level1 extends Scene {
             this.tutorialMode &&
             this.tutorialPhase === "awaiting-zombie"
         ) {
-            this.tutorialPhase = "emails2";
+            this.tutorialPhase = "awaiting-captcha";
             this.time.delayedCall(1400, () => {
                 if (!this.tutorialMode) return;
                 this.showTutorialPopup(TUTORIAL_POPUPS.email3, () =>
@@ -3241,6 +3274,28 @@ export class Level1 extends Scene {
         this.refreshPowerupUI();
     }
 
+    private shouldTriggerCaptchaForAnswer(email: EmailCase) {
+        if (this.captchaTriggeredEmails.has(email)) {
+            return false;
+        }
+
+        if (this.tutorialMode) {
+            return this.tutorialPhase === "awaiting-captcha";
+        }
+
+        return Phaser.Math.FloatBetween(0, 1) < this.captchaAnswerChance;
+    }
+
+    private startAnswerCaptchaIfNeeded(email: EmailCase) {
+        if (!this.shouldTriggerCaptchaForAnswer(email)) {
+            return false;
+        }
+
+        this.captchaTriggeredEmails.add(email);
+        this.startCaptchaInterrupt(true);
+        return true;
+    }
+
     private classifySelectedEmail(choice: EmailType) {
         if (this.inboxEmails.length === 0 || this.selectedInboxIndex < 0) {
             this.feedbackText
@@ -3252,6 +3307,10 @@ export class Level1 extends Scene {
         }
 
         const currentEmail = this.inboxEmails[this.selectedInboxIndex];
+
+        if (this.startAnswerCaptchaIfNeeded(currentEmail)) {
+            return;
+        }
 
         if (
             this.revealedEmails.has(currentEmail) &&

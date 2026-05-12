@@ -50,11 +50,11 @@ export class Tutorial extends Scene {
         },
         {
             title: "The CAPTCHA",
-            accent: "DISTRACTION EVENT",
+            accent: "EMAIL CHECK",
             body:
-                "Sometimes the system stops you with a human verification check during your shift.\n\n" +
+                "Sometimes clicking Valid or Phishing on an email stops you with a human verification check before the answer is submitted.\n\n" +
                 "Read the distorted 6-character code, type it on your keyboard, then press Enter before time runs out. Backspace fixes mistakes.\n\n" +
-                "Pass the check to get back to work. If time runs out during a real shift, you lose points and money.",
+                "Pass the check, then click your answer again. The same email will not trigger CAPTCHA twice. If time runs out during a real shift, you lose points and money.",
         },
         {
             title: "The Zombie",

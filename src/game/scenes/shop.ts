@@ -118,14 +118,14 @@ export class Shop extends Scene {
         this.add
             .text(
                 512,
-                296,
-                "Buy food and utilities every day.\nPay rent at least once every other day.\nDay 1 essentials are already covered. Essentials cost $3 each.",
+                286,
+                "Buy food and utilities every day.\nPay rent at least once every other day.\nDay 1 essentials are already covered.\nEssentials cost $3 each.",
                 {
                     fontFamily: "Dotemp-8bit",
-                    fontSize: "22px",
+                    fontSize: "19px",
                     color: "#433927",
                     align: "center",
-                    lineSpacing: 8,
+                    lineSpacing: 6,
                     wordWrap: { width: 640 },
                 },
             )
@@ -134,11 +134,11 @@ export class Shop extends Scene {
         this.add
             .text(
                 512,
-                352,
+                356,
                 "Powerups: hint $5, shield $10, eliminate $15. Shield expires after one shift.",
                 {
                     fontFamily: "Dotemp-8bit",
-                    fontSize: "16px",
+                    fontSize: "14px",
                     color: "#5a4a32",
                     align: "center",
                     wordWrap: { width: 640 },
@@ -146,21 +146,21 @@ export class Shop extends Scene {
             )
             .setOrigin(0.5);
 
-        this.createButton(300, 410, "Buy Food ($3)", "#44624c", () => {
+        this.createButton(300, 424, "Buy Food ($3)", "#44624c", () => {
             this.buyItem("food");
         });
 
-        this.createButton(512, 410, "Pay Utilities ($3)", "#44624c", () => {
+        this.createButton(512, 424, "Pay Utilities ($3)", "#44624c", () => {
             this.buyItem("utilities");
         });
 
-        this.createButton(724, 410, "Pay Rent ($3)", "#44624c", () => {
+        this.createButton(724, 424, "Pay Rent ($3)", "#44624c", () => {
             this.buyItem("rent");
         });
 
         this.createButton(
             300,
-            490,
+            502,
             "Hint ($5)",
             "#66563b",
             () => {
@@ -171,7 +171,7 @@ export class Shop extends Scene {
 
         this.createButton(
             512,
-            490,
+            502,
             "Shield ($10)",
             "#66563b",
             () => {
@@ -182,7 +182,7 @@ export class Shop extends Scene {
 
         this.createButton(
             724,
-            490,
+            502,
             "Eliminate ($15)",
             "#66563b",
             () => {
@@ -193,7 +193,7 @@ export class Shop extends Scene {
 
         this.createButton(
             512,
-            560,
+            574,
             this.tutorialMode ? "Start Day 1" : "Continue",
             "#4d5f55",
             () => {
