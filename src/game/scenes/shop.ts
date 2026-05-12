@@ -173,7 +173,7 @@ export class Shop extends Scene {
         const introMessage =
             this.day === 1 ?
                 "Day 1 essentials are already paid. Buy powerups or continue."
-            :   "Make your purchases.";
+                : "Make your purchases.";
         this.updateStatus(introMessage, "#2f4b36");
     }
 
@@ -331,7 +331,7 @@ export class Shop extends Scene {
             return;
         }
 
-        this.scene.start("Level1", {
+        this.scene.start("EventScene", {
             day: this.day + 1,
             totalPoints: this.totalPoints,
             money: this.money,
@@ -350,12 +350,11 @@ export class Shop extends Scene {
             .setColor(color)
             .setText(
                 `${message}\n\n` +
-                    `Food: ${this.foodPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Utilities: ${this.utilitiesPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Rent: ${this.rentPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Hint ${this.hintCount}  |  Eliminate ${this.revealCount}  |  Shield ${
-                        this.shieldPurchased ? "ARMED" : "NONE"
-                    }`,
+                `Food: ${this.foodPaid ? "PAID" : "NOT PAID"}\n` +
+                `Utilities: ${this.utilitiesPaid ? "PAID" : "NOT PAID"}\n` +
+                `Rent: ${this.rentPaid ? "PAID" : "NOT PAID"}\n` +
+                `Hint ${this.hintCount}  |  Eliminate ${this.revealCount}  |  Shield ${this.shieldPurchased ? "ARMED" : "NONE"
+                }`,
             );
     }
 }

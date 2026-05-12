@@ -235,6 +235,10 @@ export class Level1 extends Scene {
         this.buildInterruptUI();
         this.refreshTopBar();
 
+        this.createButton(32, 700, "Trigger Event", "#7a3e36", () => {
+            this.scene.launch("EventScene", { day: this.day, money: this.money });
+        }, 150).setDepth(20);
+
         if (this.incomingShopOutcome === "dead") {
             this.showEnding("Game Over", this.incomingOutcomeMessage);
             return;
@@ -914,7 +918,7 @@ export class Level1 extends Scene {
             .setDisplaySize(1024, 768)
             .setDepth(25)
             .setVisible(false);
-        
+
         this.zombieSprite = this.add
             .image(512, 384, "zombie")
             .setDisplaySize(1024, 768)
@@ -1686,7 +1690,7 @@ export class Level1 extends Scene {
         this.feedbackHoldUntilMs =
             options.holdMs && options.holdMs > 0 ?
                 this.time.now + options.holdMs
-            :   0;
+                : 0;
     }
 
     private scheduleFinishDayAfterStatusHold() {
@@ -1739,10 +1743,9 @@ export class Level1 extends Scene {
         this.subjectText.setText(`Subject: ${current.subject}`);
         this.contentText.setText(current.body);
         this.attachmentText.setText(
-            `Attachments: ${
-                current.attachments.length > 0 ?
-                    current.attachments.join(", ")
-                :   "none"
+            `Attachments: ${current.attachments.length > 0 ?
+                current.attachments.join(", ")
+                : "none"
             }`,
         );
         this.refreshDecisionButtons(current);
@@ -1935,7 +1938,7 @@ export class Level1 extends Scene {
             const shortViolation =
                 cutoff > 0 ?
                     firstViolation.slice(0, cutoff).trim().replace(/\.$/, "")
-                :   firstViolation;
+                    : firstViolation;
             const reasonText = shortViolation ? ` — ${shortViolation}.` : ".";
             this.totalPoints -= 1;
             this.dayPoints -= 1;
@@ -2135,8 +2138,8 @@ export class Level1 extends Scene {
         this.endDayTitle.setText(`Day ${this.day} Complete`);
         this.endDaySummary.setText(
             `Day points: ${this.dayPoints}\n` +
-                `Daily pay: $${dayPay}\n` +
-                `Current money: $${this.money}`,
+            `Daily pay: $${dayPay}\n` +
+            `Current money: $${this.money}`,
         );
 
         this.feedbackText
@@ -2202,21 +2205,21 @@ export class Level1 extends Scene {
             const key =
                 this.textures.exists("desk-computer-notification-hover") ?
                     "desk-computer-notification-hover"
-                : this.textures.exists("desk-computer-hover") ?
-                    "desk-computer-hover"
-                :   "desk-computer";
+                    : this.textures.exists("desk-computer-hover") ?
+                        "desk-computer-hover"
+                        : "desk-computer";
             this.computerObject.setTexture(key);
         } else if (hasNotification) {
             const key =
                 this.textures.exists("desk-computer-notification") ?
                     "desk-computer-notification"
-                :   "desk-computer";
+                    : "desk-computer";
             this.computerObject.setTexture(key);
         } else if (this.computerHovered) {
             const key =
                 this.textures.exists("desk-computer-hover") ?
                     "desk-computer-hover"
-                :   "desk-computer";
+                    : "desk-computer";
             this.computerObject.setTexture(key);
         } else {
             this.computerObject.setTexture("desk-computer");
@@ -2225,7 +2228,7 @@ export class Level1 extends Scene {
         this.filesObject.setTexture(
             this.filesHovered && this.textures.exists("desk-files-hover") ?
                 "desk-files-hover"
-            :   "desk-files",
+                : "desk-files",
         );
     }
 

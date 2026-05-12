@@ -7,6 +7,7 @@ import { Preloader } from "./scenes/preloader";
 import { Shop } from "./scenes/shop";
 import { Tutorial } from "./scenes/tutorial";
 import { LevelSelect } from "./scenes/levelSelect";
+import { EventScene } from "./scenes/event";
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -16,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
     type: CANVAS,
     parent: "game-container",
     backgroundColor: "#ffffff",
-    scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect, Ending],
+    scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect, Ending, EventScene],
     scale: {
         parent: "game-container",
         mode: Phaser.Scale.FIT,

@@ -8,24 +8,27 @@ const INTRO_SOUND_MAP: Record<string, string> = {
     "He knocks. You answer.": SOUND_KEYS.doorKnock,
 };
 
+/*
 const INTRO_SOUND_VOLUME: Record<string, number> = {
     [SOUND_KEYS.carStop]: 0.25,
     [SOUND_KEYS.openClose]: 0.4,
     [SOUND_KEYS.footsteps]: 0.4,
     [SOUND_KEYS.doorKnock]: 0.4,
 };
+*/
 
 const ENDING_SOUND_KEYS: Record<number, string> = {
     1: SOUND_KEYS.policeSiren,
     2: SOUND_KEYS.elevator,
     3: SOUND_KEYS.gunshot,
 };
-
+/*
 const ENDING_SOUND_VOLUME: Record<string, number> = {
     [SOUND_KEYS.policeSiren]: 0.25,
     [SOUND_KEYS.elevator]: 0.4,
     [SOUND_KEYS.gunshot]: 0.5,
 };
+*/
 
 export interface EndingSceneData {
     endingType: 1 | 2 | 3;
