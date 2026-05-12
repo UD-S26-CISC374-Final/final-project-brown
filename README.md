@@ -22,11 +22,14 @@ TEXT GOES HERE
 
 # Screenshot
 
-TEXT GOES HERE
+<img width="1440" height="1071" alt="EmailsPleaseFullSS" src="https://github.com/user-attachments/assets/f7eaa9ba-4cc5-45f7-9bcc-4709666ab7fc" />
+
+
+<img width="320" height="320" alt="EmailsPlease320SS" src="https://github.com/user-attachments/assets/7ba8020a-85a1-4ddd-8497-50effb2ef435" />
 
 # Gameplay Video
 
-TEXT GOES HERE
+(https://drive.google.com/file/d/15vjT_KIhWQV0WEijsZFjLaBEqNfgKqXb/view?usp=sharing)
 
 # Educational Game Design Document
 
