@@ -169,7 +169,7 @@ export class Level1 extends Scene {
 
     //tracking missed emails for end of day summary
     private missedEmails = 0;
-    private missedEmailsFeedbackGiven = new WeakSet<EmailCase>();
+    private missedEmailsText = new WeakSet<EmailCase>();
     private missedEmailsFeedback = new Set<string>();
     private toLevelReviewButton!: Phaser.GameObjects.Text;
 
@@ -809,7 +809,7 @@ export class Level1 extends Scene {
             "Level Review",
             "#44624c",
             () => {
-                this.scene.start("LevelReview", {
+                this.scene.start("LevelReviewScene", {
                     day: this.day,
                     totalPoints: this.totalPoints,
                     money: this.money,
@@ -818,12 +818,14 @@ export class Level1 extends Scene {
                     revealCount: this.revealCount,
                     shieldActive: this.shieldActive,
                     missedEmails: this.missedEmails,
-                    missedEmailsFeedbackGiven: this.missedEmailsFeedbackGiven,
+                    missedEmailsText: this.missedEmailsText,
                     missedEmailsFeedback: this.missedEmailsFeedback,
                 });
             },
             240,
-        );
+        )
+            .setDepth(60)
+            .setVisible(false);
 
         this.finalTitle = this.add
             .text(512, 250, "", {
@@ -1880,7 +1882,7 @@ export class Level1 extends Scene {
                 { holdMs: this.classificationFeedbackHoldMs },
             );
             this.missedEmails += 1;
-            this.missedEmailsFeedbackGiven.add(currentEmail);
+            this.missedEmailsText.add(currentEmail);
             this.missedEmailsFeedback.add(reasonText);
         }
 
@@ -2172,6 +2174,7 @@ export class Level1 extends Scene {
         this.endDayTitle.setVisible(visible);
         this.endDaySummary.setVisible(visible);
         this.toShopButton.setVisible(visible);
+        this.toLevelReviewButton.setVisible(visible);
     }
 
     private showFinalUI(visible: boolean) {
