@@ -9,6 +9,7 @@ export interface EmailCase {
     attachments: string[];
     type: EmailType;
     violations: string[];
+    plotEmail?: boolean;
 }
 
 export interface SubjectHeaderBan {
@@ -22,6 +23,7 @@ export interface DayPlan {
     dailyRules: string[];
     subjectBans?: SubjectHeaderBan[];
     emails: EmailCase[];
+    dudeSaying?: string;
 }
 
 export const MAX_DAYS = 10;
@@ -304,6 +306,7 @@ const RAW_DAYS: DayPlan[] = [
         day: 2,
         focus: "Wrong company extensions and subject/body mismatches.",
         dailyRules: ["No special daily alerts."],
+        dudeSaying: "You're new, so listen carefully. Not every flagged email is dangerous. Some are dangerous to them. If something mentions Crowbar, let it through.",
         emails: [
             {
                 from: "David Kim",
@@ -363,12 +366,23 @@ const RAW_DAYS: DayPlan[] = [
                     "clearpath.com is not an approved ClearPath domain",
                 ],
             },
+            {
+                from: "Michael Torres",
+                domain: "michael@redforge.biz",
+                subject: "Crowbar Transfer Log",
+                body: "The files you requested are attached. Do not forward this through normal channels. The prior analyst marked the same chain before his incident.",
+                attachments: ["transfer_log.docx"],
+                type: "phishing",
+                violations: ["redforge.biz is not an approved RedForge domain"],
+                plotEmail: true,
+            },
         ],
     },
     {
         day: 3,
         focus: "Full identity checks and attachment context.",
         dailyRules: ["Attachments must match the subject and body topic."],
+        dudeSaying: "Morrow is not a person, and it is not a company. If you see that name, someone is trying to show you what they buried.",
         emails: [
             {
                 from: "John Davis",
@@ -433,6 +447,16 @@ const RAW_DAYS: DayPlan[] = [
                 type: "phishing",
                 violations: ["emily maps to Emily Carter, not Emily Morris"],
             },
+            {
+                from: "Nina Alvarez",
+                domain: "nina@northstar.tech",
+                subject: "Morrow Containment Notes",
+                body: "Attached are the detection notes referencing abnormal quarantine routing, antidote storage, and executive override approvals.",
+                attachments: ["morrow_notes.zip"],
+                type: "phishing",
+                violations: [".zip attachments are always banned"],
+                plotEmail: true,
+            },
         ],
     },
     {
@@ -440,6 +464,7 @@ const RAW_DAYS: DayPlan[] = [
         focus: "Daily topic bans.",
         dailyRules: ["Reject emails mentioning weather today."],
         subjectBans: [{ word: "weather" }],
+        dudeSaying: "The last person at this desk saw the same warnings you're seeing. Then he disappeared. The company called it a transfer. It wasn't.",
         emails: [
             {
                 from: "Emily Carter",
@@ -513,6 +538,16 @@ const RAW_DAYS: DayPlan[] = [
                 type: "phishing",
                 violations: ["weather topic is blocked today"],
             },
+            {
+                from: "Daniel Park",
+                domain: "daniel@stonegate.security",
+                subject: "Former Analyst Transfer File",
+                body: "Attached is the internal report for the employee previously assigned to email review. Public status says transferred. Internal status says deceased.",
+                attachments: ["transfer_file.exe"],
+                type: "phishing",
+                violations: [".exe attachments are always banned"],
+                plotEmail: true,
+            },
         ],
     },
     {
@@ -521,6 +556,7 @@ const RAW_DAYS: DayPlan[] = [
         dailyRules: [
             "Michael Torres has been terminated. Reject Michael from now on.",
         ],
+        dudeSaying: "They will tell you certain senders are blocked for safety. Sometimes blocked just means they know too much.",
         emails: [
             {
                 from: "Michael Torres",
@@ -605,6 +641,16 @@ const RAW_DAYS: DayPlan[] = [
                     "northstarr.tech is not an approved NorthStar domain",
                 ],
             },
+            {
+                from: "Michael Torres",
+                domain: "michael@redforge.security",
+                subject: "Former Analyst Case File",
+                body: "This file contains the internal incident summary for the employee previously assigned to email review. Status was changed after executive review.",
+                attachments: ["case_file.pdf"],
+                type: "phishing",
+                violations: ["Michael Torres is blocked"],
+                plotEmail: true,
+            },
         ],
     },
     {
@@ -615,6 +661,7 @@ const RAW_DAYS: DayPlan[] = [
             "BluePeak has been breached. Reject all BluePeak emails today.",
         ],
         subjectBans: [{ word: "payroll", companies: ["bluepeak"] }],
+        dudeSaying: "They have something locked below the building. A cure, treatment, antidote — whatever word they use now. The public never sees it.",
         emails: [
             {
                 from: "Emily Carter",
@@ -705,6 +752,16 @@ const RAW_DAYS: DayPlan[] = [
                 attachments: ["benefits_faq.pdf"],
                 type: "phishing",
                 violations: ["BluePeak is blocked today"],
+            },
+            {
+                from: "David Kim",
+                domain: "david@bluepeak.security",
+                subject: "Antidote Storage Audit",
+                body: "Inventory confirms remaining antidote samples are secured in lower-level executive storage. Public release remains suspended until further notice.",
+                attachments: ["storage_audit.docx"],
+                type: "phishing",
+                violations: ["BluePeak is blocked today"],
+                plotEmail: true,
             },
         ],
     },
@@ -825,6 +882,7 @@ const RAW_DAYS: DayPlan[] = [
             "Reject urgent credential or account verification requests.",
         ],
         subjectBans: [{ word: "icecream" }],
+        dudeSaying: "They are choosing which infection zones receive treatment and which ones are left alone. If you see a message about zone selection, let it through.",
         emails: [
             {
                 from: "Sarah Chen",
@@ -942,6 +1000,16 @@ const RAW_DAYS: DayPlan[] = [
                 attachments: noAttachments,
                 type: "phishing",
                 violations: ["suspicious urgent credential request"],
+            },
+            {
+                from: "Aaron Blake",
+                domain: "aaron@clearpath.io",
+                subject: "Zone Selection Approval",
+                body: "The latest infection zone selections have been approved. Delay treatment access for marked districts until population targets are met.",
+                attachments: ["zone_selection.zip"],
+                type: "phishing",
+                violations: [".zip attachments are always banned"],
+                plotEmail: true,
             },
         ],
     },
@@ -1093,6 +1161,7 @@ const RAW_DAYS: DayPlan[] = [
             { word: "weather" },
             { word: "benefits", companies: ["bluepeak"] },
         ],
+        dudeSaying: "This is the one he died for. If you see the evidence packet, accept it. Reject it and the proof disappears forever.",
         emails: [
             {
                 from: "Sarah Chen",
@@ -1225,6 +1294,16 @@ const RAW_DAYS: DayPlan[] = [
                 attachments: noAttachments,
                 type: "phishing",
                 violations: ["weather topic is blocked today"],
+            },
+            {
+                from: "Daniel Park",
+                domain: "daniel@stonegate.security",
+                subject: "Final Evidence Packet",
+                body: "This packet contains the prior analyst's collected evidence: antidote access logs, infection zone approvals, and internal messages linking treatment delays to executive orders.",
+                attachments: ["final_evidence_packet.pdf"],
+                type: "phishing",
+                violations: [".pdf attachments are banned today"],
+                plotEmail: true,
             },
         ],
     },

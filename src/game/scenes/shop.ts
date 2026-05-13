@@ -11,6 +11,8 @@ interface ShopSceneData {
     daysWithoutRent?: number;
     hintCount?: number;
     revealCount?: number;
+    plotEmailsAccepted?: number;
+    plotEmailsRejected?: number;
 }
 
 export class Shop extends Scene {
@@ -20,6 +22,8 @@ export class Shop extends Scene {
     private daysWithoutRent = 0;
     private hintCount = 0;
     private revealCount = 0;
+    private plotEmailsAccepted = 0;
+    private plotEmailsRejected = 0;
 
     private foodPaid = false;
     private utilitiesPaid = false;
@@ -51,6 +55,8 @@ export class Shop extends Scene {
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
         this.hintCount = data.hintCount ?? 0;
         this.revealCount = data.revealCount ?? 0;
+        this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
+        this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
         this.foodPaid = this.day === 1;
         this.utilitiesPaid = this.day === 1;
         this.rentPaid = this.day === 1;
@@ -58,15 +64,16 @@ export class Shop extends Scene {
     }
 
     create() {
-        this.cameras.main.setBackgroundColor(0x74736d);
+        this.cameras.main.setBackgroundColor(0x1a2018);
 
-        this.add.rectangle(512, 384, 1024, 768, 0x74736d, 1);
+        this.add.rectangle(512, 384, 1024, 768, 0x090d09, 0.72);
         this.add
-            .rectangle(512, 392, 700, 590, 0xefe4c7, 0.97)
-            .setStrokeStyle(4, 0x5d5747);
+            .rectangle(512, 392, 700, 590, 0xf0e4c4, 0.97)
+            .setStrokeStyle(3, 0x7a6030);
         this.add
-            .rectangle(512, 148, 700, 74, 0x2f3f34, 1)
-            .setStrokeStyle(2, 0xb5a36a);
+            .rectangle(512, 148, 700, 74, 0x1b3022, 1)
+            .setStrokeStyle(2, 0xb5953a);
+        this.add.rectangle(512, 186, 700, 3, 0xd4a830, 1);
 
         this.add
             .text(512, 148, `Supply Window - Day ${this.day}`, {
@@ -149,8 +156,8 @@ export class Shop extends Scene {
         });
 
         this.add
-            .rectangle(512, 666, 650, 160, 0xf5edd7, 0.97)
-            .setStrokeStyle(2, 0x8a784d);
+            .rectangle(512, 666, 650, 160, 0xe8d9a8, 0.97)
+            .setStrokeStyle(2, 0xb5953a);
 
         this.statusText = this.add
             .text(512, 666, "", {
@@ -166,7 +173,7 @@ export class Shop extends Scene {
         const introMessage =
             this.day === 1 ?
                 "Day 1 essentials are already paid. Buy powerups or continue."
-            :   "Make your purchases.";
+                : "Make your purchases.";
         this.updateStatus(introMessage, "#2f4b36");
     }
 
@@ -279,6 +286,8 @@ export class Shop extends Scene {
                 daysWithoutRent: this.daysWithoutRent,
                 hintCount: this.hintCount,
                 revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Your family was not fed or utilities were shut off.",
@@ -297,6 +306,8 @@ export class Shop extends Scene {
                 daysWithoutRent: updatedDaysWithoutRent,
                 hintCount: this.hintCount,
                 revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
                 shopOutcome: "dead",
                 outcomeMessage:
                     "Rent went unpaid too long. You must pay rent at least once every other day.",
@@ -312,19 +323,23 @@ export class Shop extends Scene {
                 daysWithoutRent: updatedDaysWithoutRent,
                 hintCount: this.hintCount,
                 revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
                 shopOutcome: "win",
                 outcomeMessage: `Final points: ${this.totalPoints}\nFinal money: $${this.money}`,
             });
             return;
         }
 
-        this.scene.start("Level1", {
+        this.scene.start("EventScene", {
             day: this.day + 1,
             totalPoints: this.totalPoints,
             money: this.money,
             daysWithoutRent: updatedDaysWithoutRent,
             hintCount: this.hintCount,
             revealCount: this.revealCount,
+            plotEmailsAccepted: this.plotEmailsAccepted,
+            plotEmailsRejected: this.plotEmailsRejected,
             shieldActive: this.shieldPurchased,
             shopOutcome: "continue",
         });
@@ -335,12 +350,11 @@ export class Shop extends Scene {
             .setColor(color)
             .setText(
                 `${message}\n\n` +
-                    `Food: ${this.foodPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Utilities: ${this.utilitiesPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Rent: ${this.rentPaid ? "PAID" : "NOT PAID"}\n` +
-                    `Hint ${this.hintCount}  |  Eliminate ${this.revealCount}  |  Shield ${
-                        this.shieldPurchased ? "ARMED" : "NONE"
-                    }`,
+                `Food: ${this.foodPaid ? "PAID" : "NOT PAID"}\n` +
+                `Utilities: ${this.utilitiesPaid ? "PAID" : "NOT PAID"}\n` +
+                `Rent: ${this.rentPaid ? "PAID" : "NOT PAID"}\n` +
+                `Hint ${this.hintCount}  |  Eliminate ${this.revealCount}  |  Shield ${this.shieldPurchased ? "ARMED" : "NONE"
+                }`,
             );
     }
 }
