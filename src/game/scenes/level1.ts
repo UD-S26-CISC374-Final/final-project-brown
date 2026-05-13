@@ -200,6 +200,9 @@ export class Level1 extends Scene {
     private emailCloseXText!: Phaser.GameObjects.Text;
     private rulesCloseXText!: Phaser.GameObjects.Text;
 
+    //save feature
+    private loadCode = "";
+
     constructor() {
         super("Level1");
     }
@@ -404,7 +407,20 @@ export class Level1 extends Scene {
             "Main Menu",
             "#66563b",
             () => {
-                this.scene.start("MainMenu");
+                if (this.day == 1) {
+                    this.scene.start("MainMenu");
+                } else {
+                    this.scene.start("MainMenu", {
+                        day: this.day,
+                        totalPoints: this.totalPoints,
+                        money: this.money,
+                        daysWithoutRent: this.daysWithoutRent,
+                        hintCount: this.hintCount,
+                        revealCount: this.revealCount,
+                        plotEmailsAccepted: this.plotEmailsAccepted,
+                        plotEmailsRejected: this.plotEmailsRejected
+                    });
+                }
             },
             120,
         ).setDepth(14);
@@ -854,18 +870,7 @@ export class Level1 extends Scene {
             "Level Review",
             "#44624c",
             () => {
-                this.scene.start("LevelReviewScene", {
-                    day: this.day,
-                    totalPoints: this.totalPoints,
-                    money: this.money,
-                    daysWithoutRent: this.daysWithoutRent,
-                    hintCount: this.hintCount,
-                    revealCount: this.revealCount,
-                    shieldActive: this.shieldActive,
-                    missedEmails: this.missedEmails,
-                    missedEmailsText: this.missedEmailsText,
-                    missedEmailsFeedback: this.missedEmailsFeedback,
-                });
+                this.reviewLevel();
             },
             240,
         )
@@ -1455,7 +1460,7 @@ export class Level1 extends Scene {
                     return;
                 }
                 timeRemaining--;
-                this.zombieTimerText?.setText(`Time: ${timeRemaining}s`);
+                timerText.setText(`Time: ${timeRemaining}s`);
                 if (timeRemaining <= 0) {
                     const message = "You have been Infected!";
                     this.finalSummary.setText(`${message}\n\nPress Restart to play again.`);
@@ -2188,6 +2193,22 @@ export class Level1 extends Scene {
             revealCount: this.revealCount,
             plotEmailsAccepted: this.plotEmailsAccepted,
             plotEmailsRejected: this.plotEmailsRejected,
+        });
+    }
+
+    private reviewLevel() {
+        this.scene.start("LevelReview", {
+            day: this.day,
+            money: this.money,
+            daysWithoutRent: this.daysWithoutRent,
+            hintCount: this.hintCount,
+            revealCount: this.revealCount,
+            totalPoints: this.totalPoints,
+            plotEmailsAccepted: this.plotEmailsAccepted,
+            plotEmailsRejected: this.plotEmailsRejected,
+            missedEmails: this.missedEmails,
+            missedEmailsText: this.missedEmailsText,
+            missedEmailsFeedback: this.missedEmailsFeedback,
         });
     }
 

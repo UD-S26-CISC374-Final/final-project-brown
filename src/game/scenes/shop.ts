@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { playOneShot, SOUND_KEYS } from "../audio";
+import { playOneShot, SOUND_KEYS, ensureLoopingSound } from "../audio";
 import { MAX_DAYS } from "../email-content";
 
 type ShopItem = "food" | "utilities" | "rent" | "hint" | "shield" | "reveal";
@@ -64,6 +64,7 @@ export class Shop extends Scene {
     }
 
     create() {
+        ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
         this.cameras.main.setBackgroundColor(0x1a2018);
 
         this.add.rectangle(512, 384, 1024, 768, 0x090d09, 0.72);

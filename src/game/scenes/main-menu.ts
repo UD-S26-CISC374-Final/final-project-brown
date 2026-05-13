@@ -9,6 +9,19 @@ import {
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
+
+
+interface MainMenuData {
+    day?: number;
+    totalPoints?: number
+    money?: number;
+    daysWithoutRent?: number
+    hintCount?: number;
+    revealCount?: number
+    plotEmailsAccepted?: number;
+    plotEmailsRejected?: number;
+}
+
 const W = 1024;
 const H = 768;
 
@@ -21,6 +34,30 @@ export class MainMenu extends Scene implements ChangeableScene {
     constructor() {
         super("MainMenu");
     }
+
+    private day = 1;
+    private totalPoints = 0;
+    private money = 0;
+    private daysWithoutRent = 0;
+    private hintCount = 0;
+    private revealCount = 0;
+    private plotEmailsAccepted = 0;
+    private plotEmailsRejected = 0;
+
+
+
+
+    init(data: MainMenuData) {
+        this.day = data.day ?? 1;
+        this.totalPoints = data.totalPoints ?? 0;
+        this.money = data.money ?? 0;
+        this.daysWithoutRent = data.daysWithoutRent ?? 0;
+        this.hintCount = data.hintCount ?? 0;
+        this.revealCount = data.revealCount ?? 0;
+        this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
+        this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
+    }
+
 
     create() {
         ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
@@ -235,7 +272,16 @@ export class MainMenu extends Scene implements ChangeableScene {
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 stopSound(this, SOUND_KEYS.menuTheme);
-                this.scene.start("Level1", { day: 1 });
+                this.scene.start("Level1", {
+                    day: 1,
+                    totalPoints: 0,
+                    money: 0,
+                    daysWithoutRent: 0,
+                    hintCount: 0,
+                    revealCount: 0,
+                    plotEmailsAccepted: 0,
+                    plotEmailsRejected: 0
+                });
             });
 
         const levelSelectButton = this.add
@@ -265,6 +311,52 @@ export class MainMenu extends Scene implements ChangeableScene {
                 this.scene.start("LevelSelect");
             });
 
+        const continueButton = this.add
+            .text(cardX, btnY - 70, "Continue Shift", {
+                fontFamily: "Pix32",
+                fontSize: 22,
+                color: "#f0e8d4",
+                stroke: "#1a2a1a",
+                strokeThickness: 1,
+                backgroundColor: "#3a5c42",
+                padding: { left: 18, right: 18, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(10)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                continueButton.setStyle({ backgroundColor: "#4e7a56" });
+                continueButton.setScale(1.05);
+            })
+            .on("pointerout", () => {
+                continueButton.setStyle({ backgroundColor: "#3a5c42" });
+                continueButton.setScale(1);
+            })
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Level1", {
+                    day: this.day,
+                    totalPoints: this.totalPoints,
+                    money: this.money,
+                    daysWithoutRent: this.daysWithoutRent,
+                    hintCount: this.hintCount,
+                    revealCount: this.revealCount,
+                    plotEmailsAccepted: this.plotEmailsAccepted,
+                    plotEmailsRejected: this.plotEmailsRejected,
+                });
+            });
+
+
+        if (this.day == 1) {
+            continueButton.setVisible(false);
+        }
+        if (this.day > 1) {
+            startButton.setText("Start New Shift");
+        }
+
+
+
         EventBus.emit("current-scene-ready", this);
     }
 
@@ -275,6 +367,10 @@ export class MainMenu extends Scene implements ChangeableScene {
         }
 
         this.scene.start("Tutorial");
+    }
+
+    load_save() {
+
     }
 
     moveSprite(callback: ({ x, y }: { x: number; y: number }) => void) {
