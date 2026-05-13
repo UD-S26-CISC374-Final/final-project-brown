@@ -407,20 +407,18 @@ export class Level1 extends Scene {
             "Main Menu",
             "#66563b",
             () => {
-                if (this.day == 1) {
-                    this.scene.start("MainMenu");
-                } else {
-                    this.scene.start("MainMenu", {
-                        day: this.day,
-                        totalPoints: this.totalPoints,
-                        money: this.money,
-                        daysWithoutRent: this.daysWithoutRent,
-                        hintCount: this.hintCount,
-                        revealCount: this.revealCount,
-                        plotEmailsAccepted: this.plotEmailsAccepted,
-                        plotEmailsRejected: this.plotEmailsRejected
-                    });
-                }
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("MainMenu", {
+                    day: this.day,
+                    totalPoints: this.totalPoints,
+                    money: this.money,
+                    daysWithoutRent: this.daysWithoutRent,
+                    hintCount: this.hintCount,
+                    revealCount: this.revealCount,
+                    plotEmailsAccepted: this.plotEmailsAccepted,
+                    plotEmailsRejected: this.plotEmailsRejected
+                });
+
             },
             120,
         ).setDepth(14);
@@ -927,7 +925,17 @@ export class Level1 extends Scene {
             "Main Menu",
             "#66563b",
             () => {
-                this.scene.start("MainMenu");
+                this.scene.start("MainMenu", {
+                    day: this.day,
+                    totalPoints: this.totalPoints,
+                    money: this.money,
+                    daysWithoutRent: this.daysWithoutRent,
+                    hintCount: this.hintCount,
+                    revealCount: this.revealCount,
+                    plotEmailsAccepted: this.plotEmailsAccepted,
+                    plotEmailsRejected: this.plotEmailsRejected,
+                }
+                );
             },
             240,
         )

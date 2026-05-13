@@ -3,6 +3,7 @@ import { Ending } from "./scenes/ending";
 import { Level1 as MainGame } from "./scenes/level1";
 import { MainMenu } from "./scenes/main-menu";
 import { CANVAS, Game } from "phaser";
+import { LevelReviewScene } from "./scenes/levelreview";
 import { Preloader } from "./scenes/preloader";
 import { Shop } from "./scenes/shop";
 import { Tutorial } from "./scenes/tutorial";
@@ -17,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
     type: CANVAS,
     parent: "game-container",
     backgroundColor: "#ffffff",
-    scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect, Ending, EventScene],
+    scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect, Ending, EventScene, LevelReviewScene],
     scale: {
         parent: "game-container",
         mode: Phaser.Scale.FIT,

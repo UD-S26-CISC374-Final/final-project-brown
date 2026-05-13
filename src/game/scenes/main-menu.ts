@@ -20,6 +20,7 @@ interface MainMenuData {
     revealCount?: number
     plotEmailsAccepted?: number;
     plotEmailsRejected?: number;
+    new_shift?: boolean;
 }
 
 const W = 1024;
@@ -247,6 +248,7 @@ export class MainMenu extends Scene implements ChangeableScene {
                 this.scene.start("Tutorial");
             });
 
+
         const startButton = this.add
             .text(cardX, btnY, "Start Shift", {
                 fontFamily: "Pix32",
@@ -308,7 +310,17 @@ export class MainMenu extends Scene implements ChangeableScene {
             })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-                this.scene.start("LevelSelect");
+                this.scene.start("LevelSelect", {
+                    day: this.day,
+                    totalPoints: this.totalPoints,
+                    money: this.money,
+                    daysWithoutRent: this.daysWithoutRent,
+                    hintCount: this.hintCount,
+                    revealCount: this.revealCount,
+                    plotEmailsAccepted: this.plotEmailsAccepted,
+                    plotEmailsRejected: this.plotEmailsRejected,
+                }
+                );
             });
 
         const continueButton = this.add
@@ -347,12 +359,52 @@ export class MainMenu extends Scene implements ChangeableScene {
                 });
             });
 
+        const levelreviewButton = this.add
+            .text(cardX, btnY - 140, "Review Last Shift", {
+                fontFamily: "Pix32",
+                fontSize: 22,
+                color: "#f0e8d4",
+                stroke: "#1a2a1a",
+                strokeThickness: 1,
+                backgroundColor: "#3a5c42",
+                padding: { left: 18, right: 18, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(10)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                levelreviewButton.setStyle({ backgroundColor: "#4e7a56" });
+                levelreviewButton.setScale(1.05);
+            })
+            .on("pointerout", () => {
+                levelreviewButton.setStyle({ backgroundColor: "#3a5c42" });
+                levelreviewButton.setScale(1);
+            })
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("LevelReviewScene", {
+                    day: this.day,
+                    totalPoints: this.totalPoints,
+                    money: this.money,
+                    daysWithoutRent: this.daysWithoutRent,
+                    hintCount: this.hintCount,
+                    revealCount: this.revealCount,
+                    plotEmailsAccepted: this.plotEmailsAccepted,
+                    plotEmailsRejected: this.plotEmailsRejected,
+                });
+            });
 
         if (this.day == 1) {
             continueButton.setVisible(false);
-        }
-        if (this.day > 1) {
+            startButton.setText("Start Shift");
+            levelSelectButton.setX(cardX + 220);
+            tutorialButton.setX(cardX - 220);
+        } else {
+            continueButton.setVisible(true);
             startButton.setText("Start New Shift");
+            levelSelectButton.setX(cardX + 240);
+            tutorialButton.setX(cardX - 240);
         }
 
 

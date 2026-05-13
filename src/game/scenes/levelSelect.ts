@@ -4,8 +4,21 @@ import { ensureLoopingSound, playOneShot, SOUND_KEYS, stopSound } from "../audio
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
+
 const W = 1024;
 const H = 768;
+
+
+interface LevelSelectData {
+    day?: number;
+    totalPoints?: number;
+    money?: number;
+    daysWithoutRent?: number;
+    hintCount?: number;
+    revealCount?: number;
+    plotEmailsAccepted?: number;
+    plotEmailsRejected?: number;
+}
 
 export class LevelSelect extends Scene implements ChangeableScene {
     background: GameObjects.Image;
@@ -15,6 +28,27 @@ export class LevelSelect extends Scene implements ChangeableScene {
 
     constructor() {
         super("LevelSelect");
+    }
+
+    private day = 1;
+    private totalPoints = 0;
+    private money = 0;
+    private daysWithoutRent = 0;
+    private hintCount = 0;
+    private revealCount = 0;
+    private plotEmailsAccepted = 0;
+    private plotEmailsRejected = 0;
+
+    init(data: LevelSelectData) {
+        this.day = data.day ?? 1;
+        this.totalPoints = data.totalPoints ?? 0;
+        this.money = data.money ?? 0;
+        this.daysWithoutRent = data.daysWithoutRent ?? 0;
+        this.hintCount = data.hintCount ?? 0;
+        this.revealCount = data.revealCount ?? 0;
+        this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
+        this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
+
     }
 
     create() {
@@ -111,11 +145,20 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 .setDepth(10)
                 .setInteractive({ useHandCursor: true })
                 .on("pointerover", () => { btn.setStyle({ backgroundColor: "#e0bc50" }); btn.setScale(1.05); })
-                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#d4a830" }); btn.setScale(1); })
+                .on("pointerout", () => { btn.setStyle({ backgroundColor: "#d4a830" }); btn.setScale(1); })
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
-                    this.scene.start("Level1", { day });
+                    this.scene.start("Level1", {
+                        day,
+                        totalPoints: this.totalPoints,
+                        money: this.money,
+                        daysWithoutRent: this.daysWithoutRent,
+                        hintCount: this.hintCount,
+                        revealCount: this.revealCount,
+                        plotEmailsAccepted: this.plotEmailsAccepted,
+                        plotEmailsRejected: this.plotEmailsRejected,
+                    });
                 });
             return btn;
         };
@@ -163,7 +206,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
                 .setDepth(10)
                 .setInteractive({ useHandCursor: true })
                 .on("pointerover", () => { btn.setStyle({ backgroundColor: "#7a6848" }); btn.setScale(1.05); })
-                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#5a4a32" }); btn.setScale(1); })
+                .on("pointerout", () => { btn.setStyle({ backgroundColor: "#5a4a32" }); btn.setScale(1); })
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
@@ -193,10 +236,19 @@ export class LevelSelect extends Scene implements ChangeableScene {
             .setDepth(10)
             .setInteractive({ useHandCursor: true })
             .on("pointerover", () => { mainMenuButton.setStyle({ backgroundColor: "#4e7a56" }); mainMenuButton.setScale(1.05); })
-            .on("pointerout",  () => { mainMenuButton.setStyle({ backgroundColor: "#3a5c42" }); mainMenuButton.setScale(1); })
+            .on("pointerout", () => { mainMenuButton.setStyle({ backgroundColor: "#3a5c42" }); mainMenuButton.setScale(1); })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-                this.scene.start("MainMenu");
+                this.scene.start("MainMenu", {
+                    day: this.day,
+                    totalPoints: this.totalPoints,
+                    money: this.money,
+                    daysWithoutRent: this.daysWithoutRent,
+                    hintCount: this.hintCount,
+                    revealCount: this.revealCount,
+                    plotEmailsAccepted: this.plotEmailsAccepted,
+                    plotEmailsRejected: this.plotEmailsRejected,
+                });
             });
 
         EventBus.emit("current-scene-ready", this);

@@ -16,6 +16,7 @@ interface ShopSceneData {
 }
 
 export class Shop extends Scene {
+    private saveKey = "00.000.00000.0.00.00.0.0";
     private day = 1;
     private totalPoints = 0;
     private money = 0;
@@ -176,6 +177,17 @@ export class Shop extends Scene {
                 "Day 1 essentials are already paid. Buy powerups or continue."
                 : "Make your purchases.";
         this.updateStatus(introMessage, "#2f4b36");
+
+        this.createButton(
+            100,
+            100,
+            "Save Progress",
+            "#44624c",
+            () => {
+                this.saveProgress();
+                this.updateStatus(this.saveKey, "#2f4b36");
+            },
+        );
     }
 
     private createButton(
@@ -215,6 +227,11 @@ export class Shop extends Scene {
             button.setStyle({ backgroundColor });
             button.setScale(1);
         });
+    }
+
+    private saveProgress() {
+        this.saveKey = `${this.day}.${this.totalPoints}.${this.money}.${this.daysWithoutRent}.${this.hintCount}.${this.revealCount}.${this.plotEmailsAccepted}.${this.plotEmailsRejected}`;
+        localStorage.setItem(this.saveKey, "saved");
     }
 
     private buyItem(item: ShopItem) {
@@ -344,6 +361,8 @@ export class Shop extends Scene {
             shieldActive: this.shieldPurchased,
             shopOutcome: "continue",
         });
+
+
     }
 
     private updateStatus(message: string, color: string) {

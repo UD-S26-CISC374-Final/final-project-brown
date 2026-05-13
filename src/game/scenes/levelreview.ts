@@ -1,4 +1,4 @@
-import { GameObjects, Scene } from "phaser";
+import { Scene } from "phaser";
 
 import { playOneShot, SOUND_KEYS } from "../audio";
 
@@ -20,12 +20,10 @@ export class LevelReviewScene extends Scene {
     private revealCount = 0;
     private plotEmailsAccepted = 0;
     private plotEmailsRejected = 0;
-    private continueToShopButton!: GameObjects.Text;
-    private mainMenuButton!: GameObjects.Text;
-    private nextEmailButton!: GameObjects.Text;
+    /*private nextEmailButton!: GameObjects.Text;
     private previousEmailButton!: GameObjects.Text;
     private missedEmailsText!: Set<string>;
-    private missedEmailsFeedback!: Set<string>;
+    private missedEmailsFeedback!: Set<string>;*/
 
     constructor() {
         super("LevelReviewScene");
@@ -42,6 +40,7 @@ export class LevelReviewScene extends Scene {
 
     create() {
         this.cameras.main.setBackgroundColor(0x74736d);
+
         const mainMenuButton = this.add
             .text(512, 548, "Main Menu", {
                 fontFamily: "Pix32",
@@ -93,7 +92,7 @@ export class LevelReviewScene extends Scene {
             })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-                this.scene.start("ShopScene", {
+                this.scene.start("Shop", {
                     day: this.day,
                     totalPoints: this.totalPoints,
                     money: this.money,
