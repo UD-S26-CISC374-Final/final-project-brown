@@ -230,47 +230,68 @@ export class EventScene extends Scene {
         buttonWidth = 180,
     ) {
         const overlay = this.add
-            .rectangle(512, 384, 1024, 768, 0x000000, 0.62)
-            .setDepth(20)
+            .rectangle(512, 384, 1024, 768, 0x090d09, 0.62)
+            .setDepth(80)
             .setInteractive();
         const panel = this.add
-            .rectangle(512, 384, 700, 330, 0xc8c0aa, 1)
-            .setStrokeStyle(2, 0x8f8876)
-            .setDepth(21);
+            .rectangle(512, 384, 720, 400, 0xf0e4c4, 0.99)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(81);
         const titleText = this.add
-            .text(512, 280, title, {
+            .text(512, 230, title, {
                 fontFamily: "Dotemp-8bit",
-                fontSize: "32px",
-                color: "#38352f",
+                fontSize: "28px",
+                color: "#2f4b36",
+                fontStyle: "bold",
                 align: "center",
+                wordWrap: { width: 660 },
             })
             .setOrigin(0.5)
-            .setDepth(22);
+            .setDepth(82);
         const bodyText = this.add
-            .text(512, 384, message, {
+            .text(512, 380, message, {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "18px",
+                color: "#2a251c",
+                align: "center",
+                lineSpacing: 6,
+                wordWrap: { width: 640 },
+            })
+            .setOrigin(0.5)
+            .setDepth(82);
+        const popupButton = this.add
+            .text(512, 540, buttonLabel, {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "22px",
-                color: "#38352f",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor: "#44624c",
+                fixedWidth: buttonWidth,
                 align: "center",
-                lineSpacing: 8,
-                wordWrap: { width: 610 },
+                padding: { left: 8, right: 8, top: 12, bottom: 12 },
             })
             .setOrigin(0.5)
-            .setDepth(22);
-        const popupButton = this.createButton(
-            512,
-            512,
-            buttonLabel,
-            () => {
-                overlay.destroy();
-                panel.destroy();
-                titleText.destroy();
-                bodyText.destroy();
-                popupButton.destroy();
-                onContinue();
-            },
-            buttonWidth,
-        ).setDepth(22);
+            .setDepth(83)
+            .setInteractive({ useHandCursor: true });
+
+        popupButton.on("pointerover", () => {
+            popupButton.setStyle({ backgroundColor: "#53755b" });
+            popupButton.setScale(1.02);
+        });
+        popupButton.on("pointerout", () => {
+            popupButton.setStyle({ backgroundColor: "#44624c" });
+            popupButton.setScale(1);
+        });
+        popupButton.on("pointerdown", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+            overlay.destroy();
+            panel.destroy();
+            titleText.destroy();
+            bodyText.destroy();
+            popupButton.destroy();
+            onContinue();
+        });
     }
 
     private startLevelAfterFade(data = this.getLevelStartData()) {
