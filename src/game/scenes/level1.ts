@@ -361,10 +361,7 @@ export class Level1 extends Scene {
     };
 
     private playRandomCaptchaKeyHit() {
-        const soundKey =
-            CAPTCHA_KEY_HIT_SOUND_KEYS[
-                Phaser.Math.Between(0, CAPTCHA_KEY_HIT_SOUND_KEYS.length - 1)
-            ];
+        const soundKey = CAPTCHA_KEY_HIT_SOUND_KEYS[Phaser.Math.Between(0, CAPTCHA_KEY_HIT_SOUND_KEYS.length - 1)];
         playOneShot(this, soundKey, { volume: 0.45 });
     }
 

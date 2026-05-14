@@ -111,9 +111,9 @@ export class Preloader extends Scene {
         this.load.audio(SOUND_KEYS.policeSiren, policeSirenAudio);
         this.load.audio(SOUND_KEYS.elevator, elevatorAudio);
         this.load.audio(SOUND_KEYS.gunshot, gunshotAudio);
-        this.load.audio(SOUND_KEYS.keyHit1, keyHit1Audio);
-        this.load.audio(SOUND_KEYS.keyHit2, keyHit2Audio);
-        this.load.audio(SOUND_KEYS.keyHit3, keyHit3Audio);
+        this.load.audio(SOUND_KEYS.keyHit1 as string, keyHit1Audio);
+        this.load.audio(SOUND_KEYS.keyHit2 as string, keyHit2Audio);
+        this.load.audio(SOUND_KEYS.keyHit3 as string, keyHit3Audio);
     }
 
     create() {

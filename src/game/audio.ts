@@ -28,7 +28,7 @@ export const CAPTCHA_KEY_HIT_SOUND_KEYS = [
     SOUND_KEYS.keyHit1,
     SOUND_KEYS.keyHit2,
     SOUND_KEYS.keyHit3,
-] as const;
+] as string[];
 
 export function ensureLoopingSound(
     scene: Scene,
