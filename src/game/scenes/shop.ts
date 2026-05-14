@@ -20,6 +20,7 @@ interface LevelStartData extends ShopSceneData {
     shieldActive?: boolean;
     shopOutcome?: "continue" | "dead" | "win";
     outcomeMessage?: string;
+    forcedEvent?: "lostWallet";
 }
 
 export class Shop extends Scene {
@@ -417,7 +418,7 @@ export class Shop extends Scene {
     private leaveShop() {
         if (this.tutorialMode) {
             localStorage.setItem("tutorialCompleted", "true");
-            this.startSceneAfterFade("Level1", {
+            this.startSceneAfterFade("EventScene", {
                 day: 1,
                 totalPoints: 0,
                 money: 0,
@@ -428,6 +429,8 @@ export class Shop extends Scene {
                 plotEmailsRejected: 0,
                 shieldActive: false,
                 shopOutcome: "continue",
+                tutorialMode: true,
+                forcedEvent: "lostWallet",
             });
             return;
         }

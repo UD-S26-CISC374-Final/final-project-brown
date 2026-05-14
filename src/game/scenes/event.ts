@@ -13,6 +13,8 @@ interface EventSceneData {
     outcomeMessage?: string;
     plotEmailsAccepted?: number;
     plotEmailsRejected?: number;
+    tutorialMode?: boolean;
+    forcedEvent?: "lostWallet";
 }
 
 interface RandomEvent {
@@ -32,6 +34,12 @@ export class EventScene extends Scene {
     private outcomeMessage = "";
     private plotEmailsAccepted = 0;
     private plotEmailsRejected = 0;
+    private tutorialMode = false;
+    private forcedEvent?: EventSceneData["forcedEvent"];
+    private titleText!: Phaser.GameObjects.Text;
+    private eventText!: Phaser.GameObjects.Text;
+    private totalsText!: Phaser.GameObjects.Text;
+    private continueButton!: Phaser.GameObjects.Text;
 
     constructor() {
         super("EventScene");
@@ -49,6 +57,8 @@ export class EventScene extends Scene {
         this.outcomeMessage = data.outcomeMessage ?? "";
         this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
         this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
+        this.tutorialMode = data.tutorialMode ?? false;
+        this.forcedEvent = data.forcedEvent;
     }
 
     create() {
@@ -64,7 +74,7 @@ export class EventScene extends Scene {
             .setStrokeStyle(2, 0xb5953a);
         this.add.rectangle(512, 264, 720, 3, 0xd4a830, 1);
 
-        this.add
+        this.titleText = this.add
             .text(512, 226, "Between Shifts", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "40px",
@@ -75,7 +85,7 @@ export class EventScene extends Scene {
 
         const eventMessage = this.applyRandomEvent();
 
-        this.add
+        this.eventText = this.add
             .text(512, 362, eventMessage, {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "24px",
@@ -86,7 +96,7 @@ export class EventScene extends Scene {
             })
             .setOrigin(0.5);
 
-        this.add
+        this.totalsText = this.add
             .text(
                 512,
                 482,
@@ -101,12 +111,27 @@ export class EventScene extends Scene {
             )
             .setOrigin(0.5);
 
-        this.createButton(512, 568, `Start Day ${this.day}`, () => {
-            this.startLevelAfterFade();
-        });
+        this.continueButton = this.createButton(
+            512,
+            568,
+            this.tutorialMode ? "Continue" : `Start Day ${this.day}`,
+            () => {
+                if (this.tutorialMode) {
+                    this.showTutorialCompleteMessage();
+                    return;
+                }
+
+                this.startLevelAfterFade();
+            },
+        );
     }
 
     private applyRandomEvent() {
+        if (this.forcedEvent === "lostWallet") {
+            this.money += 10;
+            return "You found a lost wallet on the street. You returned it, and the owner rewarded you. +$10.";
+        }
+
         if (Math.random() < 0.001) {
             this.money += 50000;
             return "You found a winning lottery ticket on the ground! +$50000.";
@@ -155,7 +180,12 @@ export class EventScene extends Scene {
         return event.message;
     }
 
-    private createButton(x: number, y: number, label: string, onClick: () => void) {
+    private createButton(
+        x: number,
+        y: number,
+        label: string,
+        onClick: () => void,
+    ) {
         const button = this.add
             .text(x, y, label, {
                 fontFamily: "Dotemp-8bit",
@@ -183,24 +213,56 @@ export class EventScene extends Scene {
             button.setStyle({ backgroundColor: "#4d5f55" });
             button.setScale(1);
         });
+
+        return button;
     }
 
-    private startLevelAfterFade() {
-        this.cameras.main.fadeOut(250, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => {
-            this.scene.start("Level1", {
-                day: this.day,
-                totalPoints: this.totalPoints,
-                money: this.money,
-                daysWithoutRent: this.daysWithoutRent,
-                hintCount: this.hintCount,
-                revealCount: this.revealCount,
-                shieldActive: this.shieldActive,
-                shopOutcome: this.shopOutcome,
-                outcomeMessage: this.outcomeMessage,
-                plotEmailsAccepted: this.plotEmailsAccepted,
-                plotEmailsRejected: this.plotEmailsRejected,
+    private showTutorialCompleteMessage() {
+        this.titleText.setText("Example Round Complete");
+        this.eventText.setText(
+            "The example round is over.\n\nYou are about to begin the actual game.",
+        );
+        this.totalsText.setVisible(false);
+        this.continueButton.setText("Begin Actual Game");
+        this.continueButton.removeAllListeners("pointerdown");
+        this.continueButton.on("pointerdown", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+            this.startLevelAfterFade({
+                day: 1,
+                totalPoints: 0,
+                money: 0,
+                daysWithoutRent: 0,
+                hintCount: 0,
+                revealCount: 0,
+                shieldActive: false,
+                shopOutcome: "continue",
+                outcomeMessage: "",
+                plotEmailsAccepted: 0,
+                plotEmailsRejected: 0,
             });
         });
+    }
+
+    private startLevelAfterFade(data = this.getLevelStartData()) {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start("Level1", data);
+        });
+    }
+
+    private getLevelStartData() {
+        return {
+            day: this.day,
+            totalPoints: this.totalPoints,
+            money: this.money,
+            daysWithoutRent: this.daysWithoutRent,
+            hintCount: this.hintCount,
+            revealCount: this.revealCount,
+            shieldActive: this.shieldActive,
+            shopOutcome: this.shopOutcome,
+            outcomeMessage: this.outcomeMessage,
+            plotEmailsAccepted: this.plotEmailsAccepted,
+            plotEmailsRejected: this.plotEmailsRejected,
+        };
     }
 }
