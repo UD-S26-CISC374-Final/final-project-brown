@@ -341,6 +341,7 @@ export class Level1 extends Scene {
         if (event.key === "Backspace") {
             event.preventDefault();
             this.captchaInput = this.captchaInput.slice(0, -1);
+            this.playRandomCaptchaKeyHit();
             this.refreshCaptchaInput();
             return;
         }
