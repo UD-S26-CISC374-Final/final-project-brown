@@ -65,6 +65,9 @@ export class MainMenu extends Scene implements ChangeableScene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             stopSound(this, SOUND_KEYS.menuTheme)
         })
+        this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+            stopSound(this, SOUND_KEYS.menuTheme);
+        });
         this.events.once("shutdown", () => {
             stopSound(this, SOUND_KEYS.menuTheme)
         });
@@ -365,47 +368,12 @@ export class MainMenu extends Scene implements ChangeableScene {
                 });
             });
 
-        const levelreviewButton = this.add
-            .text(cardX, btnY - 140, "Review Last Shift", {
-                fontFamily: "Pix32",
-                fontSize: 22,
-                color: "#f0e8d4",
-                stroke: "#1a2a1a",
-                strokeThickness: 1,
-                backgroundColor: "#3a5c42",
-                padding: { left: 18, right: 18, top: 10, bottom: 10 },
-                align: "center",
-            })
-            .setOrigin(0.5)
-            .setDepth(10)
-            .setInteractive({ useHandCursor: true })
-            .on("pointerover", () => {
-                levelreviewButton.setStyle({ backgroundColor: "#4e7a56" });
-                levelreviewButton.setScale(1.05);
-            })
-            .on("pointerout", () => {
-                levelreviewButton.setStyle({ backgroundColor: "#3a5c42" });
-                levelreviewButton.setScale(1);
-            })
-            .on("pointerdown", () => {
-                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-                this.scene.start("LevelReviewScene", {
-                    day: this.day,
-                    totalPoints: this.totalPoints,
-                    money: this.money,
-                    daysWithoutRent: this.daysWithoutRent,
-                    hintCount: this.hintCount,
-                    revealCount: this.revealCount,
-                    plotEmailsAccepted: this.plotEmailsAccepted,
-                    plotEmailsRejected: this.plotEmailsRejected,
-                });
-            });
 
-        const inputCode = this.add.dom(cardX - 200, btnY - 50).createFromHTML(`
+        const inputCode = this.add.dom(cardX - 220, btnY - 60).createFromHTML(`
             <input type="text" id="code-input" name="code-input" placeholder="Enter loading code" style="
                 font-family: 'Pix32', sans-serif;
                 font-size: 16px;
-                padding: 8px 4px;
+                padding: 8px 12px;
                 border: 2px solid #3a5c42;
                 border-radius: 4px;
                 outline: none;
@@ -418,7 +386,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         inputElement.addEventListener("keydown", (event: KeyboardEvent) => {
             if (event.key === "Enter") {
                 const str = inputElement.value;
-                const parts = str.split(",").map(p => parseInt(p.trim(), 10));
+                const parts = str.split(".").map(p => parseInt(p.trim(), 10));
 
                 this.scene.start("Shop", {
                     day: parts[0] ?? 1,

@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { playOneShot, SOUND_KEYS, ensureLoopingSound } from "../audio";
+import { playOneShot, SOUND_KEYS, ensureLoopingSound, stopSound } from "../audio";
 import { MAX_DAYS } from "../email-content";
 
 type ShopItem = "food" | "utilities" | "rent" | "hint" | "shield" | "reveal";
@@ -33,6 +33,7 @@ export class Shop extends Scene {
 
     private moneyText!: Phaser.GameObjects.Text;
     private statusText!: Phaser.GameObjects.Text;
+
 
     private brightenColor(color: string, amount: number) {
         const normalized = color.replace("#", "");
@@ -155,6 +156,9 @@ export class Shop extends Scene {
 
         this.createButton(512, 560, "Continue", "#4d5f55", () => {
             this.leaveShop();
+            this.events.once("shutdown", () => {
+                stopSound(this, SOUND_KEYS.menuTheme)
+            });
         });
 
         this.add
@@ -162,7 +166,7 @@ export class Shop extends Scene {
             .setStrokeStyle(2, 0xb5953a);
 
         this.statusText = this.add
-            .text(512, 666, "", {
+            .text(512, 667, "", {
                 fontFamily: "Pix32",
                 fontSize: "16px",
                 color: "#2f4b36",
@@ -171,23 +175,14 @@ export class Shop extends Scene {
                 wordWrap: { width: 610 },
             })
             .setOrigin(0.5);
+        this.saveProgress()
+
 
         const introMessage =
             this.day === 1 ?
                 "Day 1 essentials are already paid. Buy powerups or continue."
                 : "Make your purchases.";
         this.updateStatus(introMessage, "#2f4b36");
-
-        this.createButton(
-            100,
-            100,
-            "Save Progress",
-            "#44624c",
-            () => {
-                this.saveProgress();
-                this.updateStatus(this.saveKey, "#2f4b36");
-            },
-        );
     }
 
     private createButton(
@@ -365,11 +360,12 @@ export class Shop extends Scene {
 
     }
 
-    private updateStatus(message: string, color: string) {
+    private updateStatus(message1: string, color: string) {
         this.statusText
             .setColor(color)
             .setText(
-                `${message}\n\n` +
+                `${message1}` +
+                `\n Write this key down if you want to load this save: ${this.saveKey}\n` +
                 `Food: ${this.foodPaid ? "PAID" : "NOT PAID"}\n` +
                 `Utilities: ${this.utilitiesPaid ? "PAID" : "NOT PAID"}\n` +
                 `Rent: ${this.rentPaid ? "PAID" : "NOT PAID"}\n` +

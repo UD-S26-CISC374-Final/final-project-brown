@@ -1,6 +1,5 @@
 import { Scene } from "phaser";
-
-///import { playOneShot, SOUND_KEYS } from "../audio";
+import { playOneShot, SOUND_KEYS } from "../audio";
 import { type EmailCase } from "../email-content";
 
 interface LevelReviewSceneData {
@@ -27,7 +26,9 @@ export class LevelReviewScene extends Scene {
     private plotEmailsRejected = 0;
     private missedEmailsArray: EmailCase[] = [];
     private missedEmailsFeedback: string[] = [];
+    private selectedEmailIndex = 0;
 
+    // Panel UI elements
     private computerPanelBg!: Phaser.GameObjects.Rectangle;
     private emailPanelTitle!: Phaser.GameObjects.Text;
     private fromText!: Phaser.GameObjects.Text;
@@ -36,16 +37,13 @@ export class LevelReviewScene extends Scene {
     private contentLabelText!: Phaser.GameObjects.Text;
     private contentText!: Phaser.GameObjects.Text;
     private attachmentText!: Phaser.GameObjects.Text;
+    private feedbackReasonText!: Phaser.GameObjects.Text;
     private emailSwitchText!: Phaser.GameObjects.Text;
     private previousEmailButton!: Phaser.GameObjects.Text;
     private nextEmailButton!: Phaser.GameObjects.Text;
-    private currentEmailIndex = 0;
-
-
-
 
     constructor() {
-        super("LevelReviewScene");
+        super("LevelReview");
     }
 
     init(data: LevelReviewSceneData) {
@@ -55,382 +53,294 @@ export class LevelReviewScene extends Scene {
         this.daysWithoutRent = data.daysWithoutRent ?? 0;
         this.hintCount = data.hintCount ?? 0;
         this.revealCount = data.revealCount ?? 0;
+        this.plotEmailsAccepted = data.plotEmailsAccepted ?? 0;
+        this.plotEmailsRejected = data.plotEmailsRejected ?? 0;
+        this.missedEmailsArray = data.missedEmailsText ?? [];
+        this.missedEmailsFeedback = data.missedEmailsFeedback ?? [];
+    }
+
+    create() {
+        const W = 1024;
+        const H = 768;
+        const hasMissed = this.missedEmailsArray.length > 0;
+
+        // Background
+        this.cameras.main.setBackgroundColor(0x1a2018);
+        this.add.rectangle(W / 2, H / 2, W, H, 0x090d09, 0.72).setDepth(1);
+
+        // Header bar
+        this.add
+            .rectangle(W / 2, 40, W, 80, 0x1b3022, 0.97)
+            .setStrokeStyle(2, 0xb5953a)
+            .setDepth(10);
+        this.add.rectangle(W / 2, 82, W, 4, 0xb5a36a, 0.9).setDepth(10);
+        this.add
+            .text(W / 2, 40, `Day ${this.day} Review`, {
+                fontFamily: "Pix32",
+                fontSize: "28px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setOrigin(0.5)
+            .setDepth(11);
+
+        // Nav buttons (top bar)
+        this.createButton(100, 40, "Main Menu", "#66563b", () => {
+            this.scene.start("MainMenu", {
+                day: this.day,
+                totalPoints: this.totalPoints,
+                money: this.money,
+                daysWithoutRent: this.daysWithoutRent,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
+            });
+        }, 130).setDepth(12);
+
+        this.createButton(920, 40, "Enter Shop", "#44624c", () => {
+            this.scene.start("Shop", {
+                day: this.day,
+                totalPoints: this.totalPoints,
+                money: this.money,
+                daysWithoutRent: this.daysWithoutRent,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
+            });
+        }, 130).setDepth(12);
+
+        if (!hasMissed) {
+            // No missed emails — show a congratulatory card
+            this.add
+                .rectangle(W / 2, H / 2 + 20, 600, 300, 0xf0e4c4, 1)
+                .setStrokeStyle(3, 0x7a6030)
+                .setDepth(3);
+            this.add
+                .text(W / 2, H / 2 - 30, "No missed emails!", {
+                    fontFamily: "Pix32",
+                    fontSize: "36px",
+                    color: "#1f5c35",
+                    fontStyle: "bold",
+                })
+                .setOrigin(0.5)
+                .setDepth(4);
+            this.add
+                .text(W / 2, H / 2 + 30, "Perfect shift. Head to the shop.", {
+                    fontFamily: "Pix32",
+                    fontSize: "20px",
+                    color: "#5a4a32",
+                })
+                .setOrigin(0.5)
+                .setDepth(4);
+            return;
+        }
+
+        // Email panel background
+        this.computerPanelBg = this.add
+            .rectangle(W / 2, H / 2 + 30, 860, 560, 0xf0e4c4, 1)
+            .setStrokeStyle(3, 0x7a6030)
+            .setDepth(5);
+
+        // Panel header bar
+        this.add
+            .rectangle(W / 2, 120, 860, 46, 0x1b3022, 1)
+            .setStrokeStyle(2, 0xb5953a)
+            .setDepth(6);
+        this.add
+            .rectangle(W / 2, 144, 860, 3, 0xd4a830, 0.9)
+            .setDepth(6);
+
+        this.emailPanelTitle = this.add
+            .text(W / 2, 120, "Missed Emails — Review", {
+                fontFamily: "Pix32",
+                fontSize: "22px",
+                color: "#f4ecd8",
+                fontStyle: "bold",
+            })
+            .setOrigin(0.5)
+            .setDepth(7);
+
+        // Email counter + nav
+        this.emailSwitchText = this.add
+            .text(200, 158, "", {
+                fontFamily: "Pix32",
+                fontSize: "16px",
+                color: "#5b4f3e",
+            })
+            .setDepth(7);
+
+        this.previousEmailButton = this.createButton(790, 158, "< Prev", "#5f6359", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.4 });
+            this.showPreviousEmail();
+        }, 90).setDepth(7);
+
+        this.nextEmailButton = this.createButton(900, 158, "Next >", "#5f6359", () => {
+            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.4 });
+            this.showNextEmail();
+        }, 90).setDepth(7);
+
+        // Email fields
+        const leftX = 110;
+        const startY = 185;
+        const lineH = 36;
+
+        this.fromText = this.add
+            .text(leftX, startY, "", {
+                fontFamily: "Pix32",
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 800 },
+            })
+            .setDepth(7);
+
+        this.domainText = this.add
+            .text(leftX, startY + lineH, "", {
+                fontFamily: "Pix32",
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 800 },
+            })
+            .setDepth(7);
+
+        this.subjectText = this.add
+            .text(leftX, startY + lineH * 2, "", {
+                fontFamily: "Pix32",
+                fontSize: "17px",
+                color: "#2a251c",
+                wordWrap: { width: 800 },
+            })
+            .setDepth(7);
+
+        this.contentLabelText = this.add
+            .text(leftX, startY + lineH * 3, "Content:", {
+                fontFamily: "Pix32",
+                fontSize: "17px",
+                color: "#2a251c",
+            })
+            .setDepth(7);
+
+        this.contentText = this.add
+            .text(leftX, startY + lineH * 3 + 26, "", {
+                fontFamily: "Pix32",
+                fontSize: "15px",
+                color: "#2a251c",
+                wordWrap: { width: 800 },
+                lineSpacing: 4,
+            })
+            .setDepth(7);
+
+        this.attachmentText = this.add
+            .text(leftX, startY + lineH * 3 + 26 + 130, "", {
+                fontFamily: "Pix32",
+                fontSize: "15px",
+                color: "#2a251c",
+                wordWrap: { width: 800 },
+            })
+            .setDepth(7);
+
+        // Why it was wrong — shown in red
+        this.feedbackReasonText = this.add
+            .text(leftX, startY + lineH * 3 + 26 + 165, "", {
+                fontFamily: "Pix32",
+                fontSize: "15px",
+                color: "#7a2d25",
+                wordWrap: { width: 800 },
+                lineSpacing: 4,
+            })
+            .setDepth(7);
+
+        this.selectedEmailIndex = 0;
+        this.refreshEmailPanel();
+    }
+
+    private refreshEmailPanel() {
+        const count = this.missedEmailsArray.length;
+        if (count === 0) return;
+
+        if (this.selectedEmailIndex < 0 || this.selectedEmailIndex >= count) {
+            this.selectedEmailIndex = 0;
+        }
+
+        const current = this.missedEmailsArray[this.selectedEmailIndex];
+        const reason = this.missedEmailsFeedback[this.selectedEmailIndex] ?? "";
+
+        this.emailSwitchText.setText(
+            `Showing ${this.selectedEmailIndex + 1} of ${count} missed`,
+        );
+        this.fromText.setText(`From: ${current.from}`);
+        this.domainText.setText(`Domain: ${current.domain}`);
+        this.subjectText.setText(`Subject: ${current.subject}`);
+        this.contentText.setText(current.body);
+        this.attachmentText.setText(
+            `Attachments: ${current.attachments.length > 0 ? current.attachments.join(", ") : "none"}`,
+        );
+        this.feedbackReasonText.setText(
+            reason ? `Why it was wrong${reason}` : "",
+        );
+    }
+
+    private showPreviousEmail() {
+        if (this.missedEmailsArray.length <= 1) return;
+        this.selectedEmailIndex =
+            (this.selectedEmailIndex - 1 + this.missedEmailsArray.length) %
+            this.missedEmailsArray.length;
+        this.refreshEmailPanel();
+    }
+
+    private showNextEmail() {
+        if (this.missedEmailsArray.length <= 1) return;
+        this.selectedEmailIndex =
+            (this.selectedEmailIndex + 1) % this.missedEmailsArray.length;
+        this.refreshEmailPanel();
+    }
+
+    private createButton(
+        x: number,
+        y: number,
+        label: string,
+        backgroundColor: string,
+        onClick: () => void,
+        fixedWidth = 180,
+    ) {
+        const hoverColor = this.brightenColor(backgroundColor, 20);
+        const button = this.add
+            .text(x, y, label, {
+                fontFamily: "Pix32",
+                fontSize: "16px",
+                color: "#f8f0dc",
+                stroke: "#211d17",
+                strokeThickness: 1,
+                backgroundColor,
+                fixedWidth,
+                align: "center",
+                padding: { left: 8, right: 8, top: 10, bottom: 10 },
+            })
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true })
+            .setShadow(0, 2, "#000000", 6, true, true);
+
+        button.on("pointerdown", onClick);
+        button.on("pointerover", () => {
+            button.setStyle({ backgroundColor: hoverColor });
+            button.setScale(1.02);
+        });
+        button.on("pointerout", () => {
+            button.setStyle({ backgroundColor });
+            button.setScale(1);
+        });
+        return button;
+    }
+
+    private brightenColor(color: string, amount: number) {
+        const normalized = color.replace("#", "");
+        const value = Number.parseInt(normalized, 16);
+        const r = Math.min(255, Math.max(0, ((value >> 16) & 0xff) + amount));
+        const g = Math.min(255, Math.max(0, ((value >> 8) & 0xff) + amount));
+        const b = Math.min(255, Math.max(0, (value & 0xff) + amount));
+        return `#${r.toString(16).padStart(2, "0")}${g
+            .toString(16)
+            .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
     }
 }
-
-/*   create() {
-       this.cameras.main.setBackgroundColor(0x74736d);
-
-       this.computerPanelBg = this.add.rectangle(512, 384, 900, 700, 0x211d17)
-           .setStrokeStyle(4, 0xf8f0dc)
-           .setDepth(15)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       this.emailPanelTitle = this.add.text(512, 150, "Missed Emails", {
-           fontFamily: "Pix32",
-           fontSize: 36,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 2,
-           backgroundColor: "#44624c",
-           padding: { left: 20, right: 20, top: 10, bottom: 10 },
-           align: "center",
-       })
-           .setOrigin(0.5)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       this.emailSwitchText = this.add.text(512, 650, "Use ← → to switch between missed emails", {
-           fontFamily: "Pix32",
-           fontSize: 20,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "center",
-       })
-           .setOrigin(0.5)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       this.previousEmailButton = this.add.text(300, 384, "← Previous", {
-           fontFamily: "Pix32",
-           fontSize: 24,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 20, right: 20, top: 10, bottom: 10 },
-           align: "center",
-       })
-           .setOrigin(0.5)
-           .setDepth(16)
-           .setInteractive({ useHandCursor: true })
-           .on("pointerover", () => {
-               this.previousEmailButton.setStyle({ backgroundColor: "#53755b" });
-               this.previousEmailButton.setScale(1.03);
-           })
-           .on("pointerout", () => {
-               this.previousEmailButton.setStyle({ backgroundColor: "#44624c" });
-               this.previousEmailButton.setScale(1);
-           })
-           .on("pointerdown", () => {
-               playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-               this.showPreviousEmail();
-           })
-           .setVisible(this.missedEmailsArray.length > 0);
-
-
-       this.nextEmailButton = this.add.text(724, 384, "Next →", {
-           fontFamily: "Pix32",
-           fontSize: 24,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 20, right: 20, top: 10, bottom: 10 },
-           align: "center",
-       })
-           .setOrigin(0.5)
-           .setDepth(16)
-           .setInteractive({ useHandCursor: true })
-           .on("pointerover", () => {
-               this.nextEmailButton.setStyle({ backgroundColor: "#53755b" });
-               this.nextEmailButton.setScale(1.03);
-           })
-           .on("pointerout", () => {
-               this.nextEmailButton.setStyle({ backgroundColor: "#44624c" });
-               this.nextEmailButton.setScale(1);
-           })
-           .on("pointerdown", () => {
-               playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-               this.showNextEmail();
-           })
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       this.fromText = this.add.text(200, 250, "", {
-           fontFamily: "Pix32",
-           fontSize: 24,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-
-       this.subjectText = this.add.text(200, 290, "", {
-           fontFamily: "Pix32",
-           fontSize: 24,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-
-       this.domainText = this.add.text(200, 330, "", {
-           fontFamily: "Pix32",
-           fontSize: 24,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-
-       this.contentLabelText = this.add.text(200, 370, "Content:", {
-           fontFamily: "Pix32",
-           fontSize: 24,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       this.contentText = this.add.text(200, 410, "", {
-           fontFamily: "Pix32",
-           fontSize: 20,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-           wordWrap: { width: 600 },
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-
-
-       this.attachmentText = this.add.text(200, 550, "", {
-           fontFamily: "Pix32",
-           fontSize: 20,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       this.attachmentText = this.add.text(200, 550, "", {
-           fontFamily: "Pix32",
-           fontSize: 20,
-           color: "#f8f0dc",
-           stroke: "#211d17",
-           strokeThickness: 1,
-           backgroundColor: "#44624c",
-           padding: { left: 15, right: 15, top: 8, bottom: 8 },
-           align: "left",
-       })
-           .setOrigin(0, 0)
-           .setDepth(16)
-           .setVisible(this.missedEmailsArray.length > 0);
-
-       
-       this.add.rectangle(512, 384, 900, 700, 0x1b3022, 1)
-           .setStrokeStyle(2, 0xb5953c)
-           .setDepth(15)
-           .setVisible(this.missedEmailsArray.length === 0);
-       this.add.rectangle(512, 384, 880, 680, 0xd4a830, 0.9)
-           .setDepth(15)
-           .setVisible(this.missedEmailsArray.length === 0);
-       this.add.rectangle(512, 384, 860, 660, 0xf8f0dc, 0.7)
-           .setStrokeStyle(1, 0xd0bd84)
-           .setDepth(15)
-           .setVisible(this.missedEmailsArray.length === 0);
-       this.add.rectangle(512, 384, 840, 640, 0x44624c, 0.5)
-           .setDepth(15)
-           .setVisible(this.missedEmailsArray.length === 0);
-
-
-       const mainMenuButton = this.add
-           .text(100, 100, "Main Menu", {
-               fontFamily: "Pix32",
-               fontSize: 32,
-               color: "#f8f0dc",
-               stroke: "#211d17",
-               strokeThickness: 1,
-               backgroundColor: "#44624c",
-               padding: { left: 30, right: 30, top: 12, bottom: 12 },
-               align: "center",
-           })
-           .setOrigin(0.5)
-           .setDepth(100)
-           .setInteractive({ useHandCursor: true })
-           .on("pointerover", () => {
-               mainMenuButton.setStyle({ backgroundColor: "#53755b" });
-               mainMenuButton.setScale(1.03);
-           })
-           .on("pointerout", () => {
-               mainMenuButton.setStyle({ backgroundColor: "#44624c" });
-               mainMenuButton.setScale(1);
-           })
-           .on("pointerdown", () => {
-               playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-               this.scene.start("MainMenu");
-           });
-
-       const continueToShopButton = this.add
-           .text(200, 200, "Continue to Shop", {
-               fontFamily: "Pix32",
-               fontSize: 32,
-               color: "#f8f0dc",
-               stroke: "#211d17",
-               strokeThickness: 1,
-               backgroundColor: "#44624c",
-               padding: { left: 30, right: 30, top: 12, bottom: 12 },
-               align: "center",
-           })
-           .setOrigin(0.5)
-           .setDepth(100)
-           .setInteractive({ useHandCursor: true })
-           .on("pointerover", () => {
-               continueToShopButton.setStyle({ backgroundColor: "#53755b" });
-               continueToShopButton.setScale(1.03);
-           })
-           .on("pointerout", () => {
-               continueToShopButton.setStyle({ backgroundColor: "#44624c" });
-               continueToShopButton.setScale(1);
-           })
-           .on("pointerdown", () => {
-               playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-               this.scene.start("Shop", {
-                   day: this.day,
-                   totalPoints: this.totalPoints,
-                   money: this.money,
-                   daysWithoutRent: this.daysWithoutRent,
-                   hintCount: this.hintCount,
-                   revealCount: this.revealCount,
-                   plotEmailsAccepted: this.plotEmailsAccepted,
-                   plotEmailsRejected: this.plotEmailsRejected,
-               });
-           });
-           private createButton(
-               x: number,
-               y: number,
-               label: string,
-               backgroundColor: string,
-               onClick: () => void,
-               fixedWidth = 180,
-           ) {
-       const hoverColor = this.brightenColor(backgroundColor, 20);
-       const button = this.add
-           .text(x, y, label, {
-               fontFamily: "Pix32",
-               fontSize: "16px",
-               color: "#f8f0dc",
-               stroke: "#211d17",
-               strokeThickness: 1,
-               backgroundColor,
-               fixedWidth,
-               align: "center",
-               padding: { left: 8, right: 8, top: 10, bottom: 10 },
-           })
-           .setOrigin(0.5)
-           .setInteractive({ useHandCursor: true })
-           .setShadow(0, 2, "#000000", 6, true, true);
-
-       button.on("pointerdown", onClick);
-       button.on("pointerover", () => {
-           button.setStyle({ backgroundColor: hoverColor });
-           button.setScale(1.05);
-       });
-       button.on("pointerout", () => {
-           button.setStyle({ backgroundColor });
-           button.setScale(1);
-       });
-       return button;
-   }
-
-   private brightenColor(color: string, amount: number) {
-       const normalized = color.replace("#", "");
-       const value = Number.parseInt(normalized, 16);
-       const r = Math.min(255, Math.max(0, ((value >> 16) & 0xff) + amount));
-       const g = Math.min(255, Math.max(0, ((value >> 8) & 0xff) + amount));
-       const b = Math.min(255, Math.max(0, (value & 0xff) + amount));
-       return `#${r.toString(16).padStart(2, "0")}${g
-           .toString(16)
-           .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-   }
-
-   private refreshEmailPanel() {
-       const count = this.missedEmailsArray.length;
-
-       if (count === 0) return;
-
-       if (this.selectedEmailIndex < 0 || this.selectedEmailIndex >= count) {
-           this.selectedEmailIndex = 0;
-       }
-
-       const current = this.missedEmailsArray[this.selectedEmailIndex];
-       this.emailSwitchText.setText(`Showing ${this.selectedEmailIndex + 1}/${count}`);
-       this.fromText.setText(`From: ${current.from}`);
-       this.domainText.setText(`Domain: ${current.domain}`);
-       this.subjectText.setText(`Subject: ${current.subject}`);
-       this.contentText.setText(current.body);
-       this.attachmentText.setText(
-           `Attachments: ${current.attachments.length > 0 ? current.attachments.join(", ") : "none"}`,
-       );
-   }
-
-   private showPreviousEmail() {
-       if (this.missedEmailsArray.length <= 1) return;
-
-       this.selectedEmailIndex =
-           (this.selectedEmailIndex - 1 + this.missedEmailsArray.length) % this.missedEmailsArray.length;
-
-       this.refreshEmailPanel();
-   }
-
-   private showNextEmail() {
-       if (this.missedEmailsArray.length <= 1) return;
-
-       this.selectedEmailIndex = (this.selectedEmailIndex + 1) % this.missedEmailsArray.length;
-
-       this.refreshEmailPanel();
-   }
-
-   private hideEmailPanel() {
-       this.computerPanelBg.setVisible(false);
-       this.emailPanelTitle.setVisible(false);
-       this.emailCloseXText.setVisible(false);
-       this.emailSwitchText.setVisible(false);
-       this.previousEmailButton.setVisible(false);
-       this.nextEmailButton.setVisible(false);
-       this.fromText.setVisible(false);
-       this.domainText.setVisible(false);
-       this.subjectText.setVisible(false);
-       this.contentLabelText.setVisible(false);
-       this.contentText.setVisible(false);
-       this.attachmentText.setVisible(false);
-   }
-}*/
-
