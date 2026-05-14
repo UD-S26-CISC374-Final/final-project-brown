@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import {
+    CAPTCHA_KEY_HIT_SOUND_KEYS,
     ensureLoopingSound,
     playOneShot,
     SOUND_KEYS,
@@ -353,9 +354,18 @@ export class Level1 extends Scene {
         if (/^[a-zA-Z0-9]$/.test(event.key) && this.captchaInput.length < 6) {
             event.preventDefault();
             this.captchaInput += event.key.toUpperCase();
+            this.playRandomCaptchaKeyHit();
             this.refreshCaptchaInput();
         }
     };
+
+    private playRandomCaptchaKeyHit() {
+        const soundKey =
+            CAPTCHA_KEY_HIT_SOUND_KEYS[
+                Phaser.Math.Between(0, CAPTCHA_KEY_HIT_SOUND_KEYS.length - 1)
+            ];
+        playOneShot(this, soundKey, { volume: 0.45 });
+    }
 
     private plotDialogPanel!: Phaser.GameObjects.Rectangle;
     private plotDialogAccent!: Phaser.GameObjects.Rectangle;

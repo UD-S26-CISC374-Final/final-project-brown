@@ -32,6 +32,9 @@ import shotAudio from "../sounds/shot.wav";
 import policeSirenAudio from "../sounds/policesiren.wav";
 import elevatorAudio from "../sounds/elevator.wav";
 import gunshotAudio from "../sounds/gunshot.wav";
+import keyHit1Audio from "../sounds/keyhit1.wav";
+import keyHit2Audio from "../sounds/keyhit2.wav";
+import keyHit3Audio from "../sounds/keyhit3.wav";
 import { SOUND_KEYS } from "../audio";
 import ending1Image from "../objects/ending1cops.png";
 import ending2Image from "../objects/ending2office.png";
@@ -108,6 +111,9 @@ export class Preloader extends Scene {
         this.load.audio(SOUND_KEYS.policeSiren, policeSirenAudio);
         this.load.audio(SOUND_KEYS.elevator, elevatorAudio);
         this.load.audio(SOUND_KEYS.gunshot, gunshotAudio);
+        this.load.audio(SOUND_KEYS.keyHit1, keyHit1Audio);
+        this.load.audio(SOUND_KEYS.keyHit2, keyHit2Audio);
+        this.load.audio(SOUND_KEYS.keyHit3, keyHit3Audio);
     }
 
     create() {

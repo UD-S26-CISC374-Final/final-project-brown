@@ -19,7 +19,16 @@ export const SOUND_KEYS = {
     policeSiren: "police-siren",
     elevator: "elevator",
     gunshot: "gunshot",
+    keyHit1: "key-hit-1",
+    keyHit2: "key-hit-2",
+    keyHit3: "key-hit-3",
 } as const;
+
+export const CAPTCHA_KEY_HIT_SOUND_KEYS = [
+    SOUND_KEYS.keyHit1,
+    SOUND_KEYS.keyHit2,
+    SOUND_KEYS.keyHit3,
+] as const;
 
 export function ensureLoopingSound(
     scene: Scene,
