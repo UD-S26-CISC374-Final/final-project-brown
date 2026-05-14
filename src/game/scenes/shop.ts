@@ -194,25 +194,27 @@ export class Shop extends Scene {
 
         this.createButton(
             512,
-            574,
+            566,
             this.tutorialMode ? "Start Day 1" : "Continue",
             "#4d5f55",
             () => {
                 this.leaveShop();
             },
+            undefined,
+            260,
         );
 
         this.add
-            .rectangle(512, 666, 650, 160, 0xe8d9a8, 0.97)
+            .rectangle(512, 690, 650, 132, 0xe8d9a8, 0.97)
             .setStrokeStyle(2, 0xb5953a);
 
         this.statusText = this.add
-            .text(512, 666, "", {
+            .text(512, 690, "", {
                 fontFamily: "Dotemp-8bit",
-                fontSize: "16px",
+                fontSize: "15px",
                 color: "#2f4b36",
                 align: "center",
-                lineSpacing: 4,
+                lineSpacing: 3,
                 wordWrap: { width: 610 },
             })
             .setOrigin(0.5);
@@ -319,6 +321,7 @@ export class Shop extends Scene {
         backgroundColor: string,
         onClick: () => void,
         hoverMessage?: string,
+        fixedWidth = 220,
     ) {
         const button = this.add
             .text(x, y, label, {
@@ -328,9 +331,9 @@ export class Shop extends Scene {
                 stroke: "#211d17",
                 strokeThickness: 1,
                 backgroundColor,
-                fixedWidth: 220,
+                fixedWidth,
                 align: "center",
-                padding: { left: 8, right: 8, top: 12, bottom: 12 },
+                padding: { left: 8, right: 8, top: 14, bottom: 16 },
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
