@@ -62,6 +62,12 @@ export class MainMenu extends Scene implements ChangeableScene {
 
     create() {
         ensureLoopingSound(this, SOUND_KEYS.menuTheme, { volume: 0.075 });
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            stopSound(this, SOUND_KEYS.menuTheme)
+        })
+        this.events.once("shutdown", () => {
+            stopSound(this, SOUND_KEYS.menuTheme)
+        });
 
         // --- Background ---
         if (this.textures.exists("desk-background")) {
@@ -395,6 +401,39 @@ export class MainMenu extends Scene implements ChangeableScene {
                 });
             });
 
+        const inputCode = this.add.dom(cardX - 200, btnY - 50).createFromHTML(`
+            <input type="text" id="code-input" name="code-input" placeholder="Enter loading code" style="
+                font-family: 'Pix32', sans-serif;
+                font-size: 16px;
+                padding: 8px 4px;
+                border: 2px solid #3a5c42;
+                border-radius: 4px;
+                outline: none;
+                width: 150px;
+            ">
+            `).setDepth(10);
+
+        const inputElement = inputCode.getChildByName("code-input") as HTMLInputElement;
+
+        inputElement.addEventListener("keydown", (event: KeyboardEvent) => {
+            if (event.key === "Enter") {
+                const str = inputElement.value;
+                const parts = str.split(",").map(p => parseInt(p.trim(), 10));
+
+                this.scene.start("Shop", {
+                    day: parts[0] ?? 1,
+                    totalPoints: parts[1] ?? 0,
+                    money: parts[2] ?? 0,
+                    daysWithoutRent: parts[3] ?? 0,
+                    hintCount: parts[4] ?? 0,
+                    revealCount: parts[5] ?? 0,
+                    plotEmailsAccepted: parts[6] ?? 0,
+                    plotEmailsRejected: parts[7] ?? 0
+                });
+            }
+        });
+
+
         if (this.day == 1) {
             continueButton.setVisible(false);
             startButton.setText("Start Shift");
@@ -410,6 +449,28 @@ export class MainMenu extends Scene implements ChangeableScene {
 
 
         EventBus.emit("current-scene-ready", this);
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                const sound = this.sound.get(SOUND_KEYS.menuTheme);
+                if (sound.isPlaying) sound.pause();
+            } else {
+                const sound = this.sound.get(SOUND_KEYS.menuTheme);
+                if (!sound.isPlaying) sound.resume();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            inputCode.destroy();
+        }, this);
+
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            stopSound(this, SOUND_KEYS.menuTheme);
+            inputCode.destroy()
+        })
     }
 
     changeScene() {
@@ -421,9 +482,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         this.scene.start("Tutorial");
     }
 
-    load_save() {
 
-    }
 
     moveSprite(callback: ({ x, y }: { x: number; y: number }) => void) {
         if (this.logoTween) {

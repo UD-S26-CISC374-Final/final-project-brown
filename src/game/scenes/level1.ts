@@ -180,8 +180,8 @@ export class Level1 extends Scene {
 
     //tracking missed emails for end of day summary
     private missedEmails = 0;
-    private missedEmailsText = new WeakSet<EmailCase>();
-    private missedEmailsFeedback = new Set<string>();
+    private missedEmailsText: EmailCase[] = [];
+    private missedEmailsFeedback: string[] = [];
     private toLevelReviewButton!: Phaser.GameObjects.Text;
     private readonly updateCrosshairPosition = (pointer: Phaser.Input.Pointer) => {
         this.crosshair.setPosition(pointer.worldX - 25, pointer.worldY);
@@ -200,8 +200,7 @@ export class Level1 extends Scene {
     private emailCloseXText!: Phaser.GameObjects.Text;
     private rulesCloseXText!: Phaser.GameObjects.Text;
 
-    //save feature
-    private loadCode = "";
+
 
     constructor() {
         super("Level1");
@@ -1372,6 +1371,7 @@ export class Level1 extends Scene {
         playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
     }
 
+
     private addPinDigit(digit: string) {
         this.playPinClick();
         if (this.inputPassword.length < 4) {
@@ -1963,6 +1963,16 @@ export class Level1 extends Scene {
                 holdMs: this.classificationFeedbackHoldMs,
             });
         } else if (this.shieldActive) {
+            this.missedEmails += 1;
+            this.missedEmailsText.push(currentEmail);
+            const firstViolation = currentEmail.violations[0] ?? "";
+            const cutoff = firstViolation.indexOf("Expected:");
+            const shortViolation =
+                cutoff > 0 ?
+                    firstViolation.slice(0, cutoff).trim().replace(/\.$/, "")
+                    : firstViolation;
+            const reasonText = shortViolation ? ` — ${shortViolation}.` : ".";
+            this.missedEmailsFeedback.push(reasonText);
             playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
             this.shieldActive = false;
             this.setStatusBar(
@@ -1971,6 +1981,8 @@ export class Level1 extends Scene {
                 { holdMs: this.classificationFeedbackHoldMs },
             );
         } else {
+            this.missedEmails += 1;
+            this.missedEmailsText.push(currentEmail);
             playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.45 });
             const firstViolation = currentEmail.violations[0] ?? "";
             const cutoff = firstViolation.indexOf("Expected:");
@@ -1979,6 +1991,7 @@ export class Level1 extends Scene {
                     firstViolation.slice(0, cutoff).trim().replace(/\.$/, "")
                     : firstViolation;
             const reasonText = shortViolation ? ` — ${shortViolation}.` : ".";
+            this.missedEmailsFeedback.push(reasonText);
             this.totalPoints -= 1;
             this.dayPoints -= 1;
             this.money -= 5;
@@ -1987,9 +2000,7 @@ export class Level1 extends Scene {
                 "#7a2d25",
                 { holdMs: this.classificationFeedbackHoldMs },
             );
-            this.missedEmails += 1;
-            this.missedEmailsText.add(currentEmail);
-            this.missedEmailsFeedback.add(reasonText);
+
         }
 
         if (currentEmail.plotEmail) {

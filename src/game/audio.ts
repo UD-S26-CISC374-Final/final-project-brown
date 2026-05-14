@@ -29,7 +29,7 @@ export function ensureLoopingSound(
     const existing = scene.sound.get(key) as Phaser.Sound.BaseSound | null;
     if (existing !== null) {
         if (!existing.isPlaying) {
-            existing.play();
+            existing.play({ loop: true, ...config });
         }
         return existing;
     }

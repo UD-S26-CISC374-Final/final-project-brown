@@ -18,6 +18,9 @@ const config: Phaser.Types.Core.GameConfig = {
     type: CANVAS,
     parent: "game-container",
     backgroundColor: "#ffffff",
+    dom: {
+        createContainer: true
+    },
     scene: [Boot, Preloader, MainMenu, Tutorial, MainGame, Shop, LevelSelect, Ending, EventScene, LevelReviewScene],
     scale: {
         parent: "game-container",
@@ -43,7 +46,11 @@ const config: Phaser.Types.Core.GameConfig = {
         pixelArt: false,
         antialias: true,
     },
+
 };
+
+
+
 
 const StartGame = (parent: string) => {
     const game = new Game({ ...config, parent });
