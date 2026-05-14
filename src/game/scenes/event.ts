@@ -32,9 +32,9 @@ export class EventScene extends Scene {
 
 
   private eventsChoice: string[] = [
-    "You found a lost wallet on the street. You return it to the owner and they reward you with some money.",
-    "You helped an old lady cross the street. She thanks you and gives you a small gift.",
-    "You got mugged on your way home. You lose some money and feel unsafe.",
+    "You found a lost wallet on the street. You return it to the owner and they reward you with some money. + 10 money!",
+    "You helped an old lady cross the street. She thanks you and gives you a small gift. +1 hint!",
+    "You got mugged on your way home and you lose some money. -10 money!",
     "You were going to get mugged, but your broke! The mugger felt bad and gave you 5 bucks.",
     "You found a winning lottery ticket on the ground! You win a huge amount of money!"
   ];

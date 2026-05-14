@@ -18,7 +18,7 @@ In Emails Please, you work the graveyard desk a Blackline Security. The job is s
 
 # Basic Instructions
 
-TEXT GOES HERE
+Read through emails by clikcing on your computer when a mail icon pops up. Read the instructions on the pages on your desk. Make sure that emails have the correct attachments, topic, sender, and company when accepting emails for your company. Otherwise classify it as phishing. If your correct you recieve money and if your incorrect you lose money. You will need to pay food and utilities everyday and rent every other day. If a guy pops into your room and interrupts you, spam press the space bar until he leaves. If a zombie pops in your room, input the code for today in the top right corner to open the gun case and shoot the zombie. Make it to the end of the day to win.
 
 # Screenshot
 
@@ -37,4 +37,5 @@ https://github.com/ethanfass/CISC-374-EGD
 
 # Credits
 
-TEXT GOES HERE
+-https://docs.phaser.io/
+- visual  studio code

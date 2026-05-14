@@ -243,10 +243,6 @@ export class Level1 extends Scene {
         this.buildInterruptUI();
         this.refreshTopBar();
 
-        this.createButton(32, 700, "Trigger Event", "#7a3e36", () => {
-            this.scene.launch("EventScene", { day: this.day, money: this.money });
-        }, 150).setDepth(20);
-
         if (this.incomingShopOutcome === "dead") {
             this.showEnding("Game Over", this.incomingOutcomeMessage);
             return;
