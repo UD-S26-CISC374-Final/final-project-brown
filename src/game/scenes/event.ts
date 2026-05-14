@@ -36,9 +36,8 @@ export class EventScene extends Scene {
     private plotEmailsRejected = 0;
     private tutorialMode = false;
     private forcedEvent?: EventSceneData["forcedEvent"];
-    private titleText!: Phaser.GameObjects.Text;
+    private messageBox!: Phaser.GameObjects.Rectangle;
     private eventText!: Phaser.GameObjects.Text;
-    private totalsText!: Phaser.GameObjects.Text;
     private continueButton!: Phaser.GameObjects.Text;
 
     constructor() {
@@ -66,55 +65,28 @@ export class EventScene extends Scene {
         this.cameras.main.fadeIn(250, 0, 0, 0);
 
         this.add.rectangle(512, 384, 1024, 768, 0x090d09, 1);
-        this.add
-            .rectangle(512, 384, 720, 430, 0xf0e4c4, 0.98)
-            .setStrokeStyle(3, 0x7a6030);
-        this.add
-            .rectangle(512, 226, 720, 72, 0x1b3022, 1)
-            .setStrokeStyle(2, 0xb5953a);
-        this.add.rectangle(512, 264, 720, 3, 0xd4a830, 1);
-
-        this.titleText = this.add
-            .text(512, 226, "Between Shifts", {
-                fontFamily: "Dotemp-8bit",
-                fontSize: "40px",
-                color: "#f4ecd8",
-                fontStyle: "bold",
-            })
-            .setOrigin(0.5);
 
         const eventMessage = this.applyRandomEvent();
 
-        this.eventText = this.add
-            .text(512, 362, eventMessage, {
-                fontFamily: "Dotemp-8bit",
-                fontSize: "24px",
-                color: "#2a251c",
-                align: "center",
-                lineSpacing: 8,
-                wordWrap: { width: 620 },
-            })
-            .setOrigin(0.5);
+        this.messageBox = this.add
+            .rectangle(512, 392, 800, 120, 0xc8c0aa, 1)
+            .setStrokeStyle(1, 0x8f8876);
 
-        this.totalsText = this.add
-            .text(
-                512,
-                482,
-                `Money: $${this.money} | Hints: ${this.hintCount}`,
-                {
-                    fontFamily: "Dotemp-8bit",
-                    fontSize: "22px",
-                    color: "#2f4b36",
-                    backgroundColor: "#ece1c4",
-                    padding: { left: 10, right: 10, top: 8, bottom: 8 },
-                },
-            )
+        this.eventText = this.add
+            .text(512, 392, eventMessage, {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "25px",
+                color: "#38352f",
+                align: "left",
+                lineSpacing: 6,
+                wordWrap: { width: 740 },
+            })
             .setOrigin(0.5);
 
         this.continueButton = this.createButton(
             512,
-            568,
-            this.tutorialMode ? "Continue" : `Start Day ${this.day}`,
+            520,
+            "Continue",
             () => {
                 if (this.tutorialMode) {
                     this.showTutorialCompleteMessage();
@@ -189,14 +161,12 @@ export class EventScene extends Scene {
         const button = this.add
             .text(x, y, label, {
                 fontFamily: "Dotemp-8bit",
-                fontSize: "24px",
-                color: "#f8f0dc",
-                stroke: "#211d17",
-                strokeThickness: 1,
-                backgroundColor: "#4d5f55",
-                fixedWidth: 250,
+                fontSize: "25px",
+                color: "#38352f",
+                backgroundColor: "#c8c0aa",
+                fixedWidth: 170,
                 align: "center",
-                padding: { left: 8, right: 8, top: 12, bottom: 12 },
+                padding: { left: 10, right: 10, top: 10, bottom: 10 },
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
@@ -206,11 +176,11 @@ export class EventScene extends Scene {
             onClick();
         });
         button.on("pointerover", () => {
-            button.setStyle({ backgroundColor: "#5f7167" });
+            button.setStyle({ backgroundColor: "#ded7c5" });
             button.setScale(1.02);
         });
         button.on("pointerout", () => {
-            button.setStyle({ backgroundColor: "#4d5f55" });
+            button.setStyle({ backgroundColor: "#c8c0aa" });
             button.setScale(1);
         });
 
@@ -218,12 +188,12 @@ export class EventScene extends Scene {
     }
 
     private showTutorialCompleteMessage() {
-        this.titleText.setText("Example Round Complete");
+        this.messageBox.setDisplaySize(800, 150);
         this.eventText.setText(
             "The example round is over.\n\nYou are about to begin the actual game.",
         );
-        this.totalsText.setVisible(false);
         this.continueButton.setText("Begin Actual Game");
+        this.continueButton.setFixedSize(280, 0);
         this.continueButton.removeAllListeners("pointerdown");
         this.continueButton.on("pointerdown", () => {
             playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
