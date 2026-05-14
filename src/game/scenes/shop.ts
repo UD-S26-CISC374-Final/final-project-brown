@@ -105,7 +105,7 @@ export class Shop extends Scene {
         this.moneyText = this.add
             .text(
                 512,
-                224,
+                214,
                 `Money: $${this.money} | Points: ${this.totalPoints}`,
                 {
                     fontFamily: "Dotemp-8bit",
@@ -194,7 +194,7 @@ export class Shop extends Scene {
 
         this.createButton(
             512,
-            566,
+            574,
             this.tutorialMode ? "Start Day 1" : "Continue",
             "#4d5f55",
             () => {
