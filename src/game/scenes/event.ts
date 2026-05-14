@@ -36,9 +36,6 @@ export class EventScene extends Scene {
     private plotEmailsRejected = 0;
     private tutorialMode = false;
     private forcedEvent?: EventSceneData["forcedEvent"];
-    private messageBox!: Phaser.GameObjects.Rectangle;
-    private eventText!: Phaser.GameObjects.Text;
-    private continueButton!: Phaser.GameObjects.Text;
 
     constructor() {
         super("EventScene");
@@ -68,11 +65,11 @@ export class EventScene extends Scene {
 
         const eventMessage = this.applyRandomEvent();
 
-        this.messageBox = this.add
+        this.add
             .rectangle(512, 392, 800, 120, 0xc8c0aa, 1)
             .setStrokeStyle(1, 0x8f8876);
 
-        this.eventText = this.add
+        this.add
             .text(512, 392, eventMessage, {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "25px",
@@ -83,19 +80,23 @@ export class EventScene extends Scene {
             })
             .setOrigin(0.5);
 
-        this.continueButton = this.createButton(
+        this.createButton(
             512,
             520,
             "Continue",
             () => {
                 if (this.tutorialMode) {
-                    this.showTutorialCompleteMessage();
+                    this.showTutorialCompletePopup();
                     return;
                 }
 
                 this.startLevelAfterFade();
             },
         );
+
+        if (this.tutorialMode) {
+            this.showTutorialEventIntroPopup();
+        }
     }
 
     private applyRandomEvent() {
@@ -157,6 +158,7 @@ export class EventScene extends Scene {
         y: number,
         label: string,
         onClick: () => void,
+        fixedWidth = 170,
     ) {
         const button = this.add
             .text(x, y, label, {
@@ -164,7 +166,7 @@ export class EventScene extends Scene {
                 fontSize: "25px",
                 color: "#38352f",
                 backgroundColor: "#c8c0aa",
-                fixedWidth: 170,
+                fixedWidth,
                 align: "center",
                 padding: { left: 10, right: 10, top: 10, bottom: 10 },
             })
@@ -187,30 +189,88 @@ export class EventScene extends Scene {
         return button;
     }
 
-    private showTutorialCompleteMessage() {
-        this.messageBox.setDisplaySize(800, 150);
-        this.eventText.setText(
-            "The example round is over.\n\nYou are about to begin the actual game.",
+    private showTutorialEventIntroPopup() {
+        this.showPopup(
+            "Random Events",
+            "After you leave the shop, something random can happen before the next work day.\n\nThese events can change your money or give you an extra tool. This example shows the lost wallet event.",
+            "Continue",
+            () => {},
         );
-        this.continueButton.setText("Begin Actual Game");
-        this.continueButton.setFixedSize(280, 0);
-        this.continueButton.removeAllListeners("pointerdown");
-        this.continueButton.on("pointerdown", () => {
-            playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
-            this.startLevelAfterFade({
-                day: 1,
-                totalPoints: 0,
-                money: 0,
-                daysWithoutRent: 0,
-                hintCount: 0,
-                revealCount: 0,
-                shieldActive: false,
-                shopOutcome: "continue",
-                outcomeMessage: "",
-                plotEmailsAccepted: 0,
-                plotEmailsRejected: 0,
-            });
-        });
+    }
+
+    private showTutorialCompletePopup() {
+        this.showPopup(
+            "Example Round Complete",
+            "The example round is over.\n\nDay 1 is about to begin.",
+            "Begin Day 1",
+            () => {
+                this.startLevelAfterFade({
+                    day: 1,
+                    totalPoints: 0,
+                    money: 0,
+                    daysWithoutRent: 0,
+                    hintCount: 0,
+                    revealCount: 0,
+                    shieldActive: false,
+                    shopOutcome: "continue",
+                    outcomeMessage: "",
+                    plotEmailsAccepted: 0,
+                    plotEmailsRejected: 0,
+                });
+            },
+            260,
+        );
+    }
+
+    private showPopup(
+        title: string,
+        message: string,
+        buttonLabel: string,
+        onContinue: () => void,
+        buttonWidth = 180,
+    ) {
+        const overlay = this.add
+            .rectangle(512, 384, 1024, 768, 0x000000, 0.62)
+            .setDepth(20)
+            .setInteractive();
+        const panel = this.add
+            .rectangle(512, 384, 700, 330, 0xc8c0aa, 1)
+            .setStrokeStyle(2, 0x8f8876)
+            .setDepth(21);
+        const titleText = this.add
+            .text(512, 280, title, {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "32px",
+                color: "#38352f",
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(22);
+        const bodyText = this.add
+            .text(512, 384, message, {
+                fontFamily: "Dotemp-8bit",
+                fontSize: "22px",
+                color: "#38352f",
+                align: "center",
+                lineSpacing: 8,
+                wordWrap: { width: 610 },
+            })
+            .setOrigin(0.5)
+            .setDepth(22);
+        const popupButton = this.createButton(
+            512,
+            512,
+            buttonLabel,
+            () => {
+                overlay.destroy();
+                panel.destroy();
+                titleText.destroy();
+                bodyText.destroy();
+                popupButton.destroy();
+                onContinue();
+            },
+            buttonWidth,
+        ).setDepth(22);
     }
 
     private startLevelAfterFade(data = this.getLevelStartData()) {
