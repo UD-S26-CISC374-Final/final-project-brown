@@ -417,7 +417,7 @@ export class Shop extends Scene {
     private leaveShop() {
         if (this.tutorialMode) {
             localStorage.setItem("tutorialCompleted", "true");
-            this.startLevelAfterFade({
+            this.startSceneAfterFade("Level1", {
                 day: 1,
                 totalPoints: 0,
                 money: 0,
@@ -433,7 +433,7 @@ export class Shop extends Scene {
         }
 
         if (!this.foodPaid || !this.utilitiesPaid) {
-            this.startLevelAfterFade({
+            this.startSceneAfterFade("Level1", {
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
@@ -453,7 +453,7 @@ export class Shop extends Scene {
             this.rentPaid ? 0 : this.daysWithoutRent + 1;
 
         if (updatedDaysWithoutRent > 1) {
-            this.startLevelAfterFade({
+            this.startSceneAfterFade("Level1", {
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
@@ -470,7 +470,7 @@ export class Shop extends Scene {
         }
 
         if (this.day >= MAX_DAYS) {
-            this.startLevelAfterFade({
+            this.startSceneAfterFade("Level1", {
                 day: this.day,
                 totalPoints: this.totalPoints,
                 money: this.money,
@@ -485,7 +485,7 @@ export class Shop extends Scene {
             return;
         }
 
-        this.startLevelAfterFade({
+        this.startSceneAfterFade("EventScene", {
             day: this.day + 1,
             totalPoints: this.totalPoints,
             money: this.money,
@@ -499,10 +499,10 @@ export class Shop extends Scene {
         });
     }
 
-    private startLevelAfterFade(data: LevelStartData) {
+    private startSceneAfterFade(sceneKey: string, data: LevelStartData) {
         this.cameras.main.fadeOut(250, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
-            this.scene.start("Level1", data);
+            this.scene.start(sceneKey, data);
         });
     }
 

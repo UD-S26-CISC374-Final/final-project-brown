@@ -18,7 +18,7 @@ function storageAvailable() {
     return typeof localStorage !== "undefined";
 }
 
-function toNumber(value: unknown, fallback: number) {
+function toNumber(value: number | undefined, fallback: number) {
     return typeof value === "number" && Number.isFinite(value) ?
             value
         :   fallback;
