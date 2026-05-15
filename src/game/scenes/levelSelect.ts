@@ -1,6 +1,11 @@
 import { GameObjects, Scene } from "phaser";
 
-import { ensureLoopingSound, playOneShot, SOUND_KEYS, stopSound } from "../audio";
+import {
+    ensureLoopingSound,
+    playOneShot,
+    SOUND_KEYS,
+    stopSound,
+} from "../audio";
 import { EventBus } from "../event-bus";
 import type { ChangeableScene } from "../reactable-scene";
 
@@ -37,7 +42,9 @@ export class LevelSelect extends Scene implements ChangeableScene {
         const cardW = 880;
         const cardH = 530;
 
-        this.add.rectangle(cardX + 8, cardY + 8, cardW, cardH, 0x000000, 0.45).setDepth(2);
+        this.add
+            .rectangle(cardX + 8, cardY + 8, cardW, cardH, 0x000000, 0.45)
+            .setDepth(2);
         this.add
             .rectangle(cardX, cardY, cardW, cardH, 0xf0e4c4, 1)
             .setStrokeStyle(3, 0x7a6030)
@@ -104,14 +111,25 @@ export class LevelSelect extends Scene implements ChangeableScene {
             align: "center",
         };
 
-        const makeDayButton = (x: number, y: number, label: string, day: number) => {
+        const makeDayButton = (
+            x: number,
+            y: number,
+            label: string,
+            day: number,
+        ) => {
             const btn = this.add
                 .text(x, y, label, dayStyle)
                 .setOrigin(0.5)
                 .setDepth(10)
                 .setInteractive({ useHandCursor: true })
-                .on("pointerover", () => { btn.setStyle({ backgroundColor: "#e0bc50" }); btn.setScale(1.05); })
-                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#d4a830" }); btn.setScale(1); })
+                .on("pointerover", () => {
+                    btn.setStyle({ backgroundColor: "#e0bc50" });
+                    btn.setScale(1.05);
+                })
+                .on("pointerout", () => {
+                    btn.setStyle({ backgroundColor: "#d4a830" });
+                    btn.setScale(1);
+                })
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
@@ -120,8 +138,18 @@ export class LevelSelect extends Scene implements ChangeableScene {
             return btn;
         };
 
-        dayXPositions.forEach((x, i) => makeDayButton(x, row1Y, `Day ${i + 1}`, i + 1));
-        dayXPositions.forEach((x, i) => makeDayButton(x, row2Y, `Day ${i + 6}`, i + 6));
+        const dayButtons: Phaser.GameObjects.Text[] = [];
+
+        dayXPositions.forEach((x, i) =>
+            dayButtons.push(makeDayButton(x, row1Y, `Day ${i + 1}`, i + 1)),
+        );
+        dayXPositions.forEach((x, i) =>
+            dayButtons.push(makeDayButton(x, row2Y, `Day ${i + 6}`, i + 6)),
+        );
+
+        for (let i = 1; i < dayButtons.length; i++) {
+            dayButtons[i].setAlpha(0.35).disableInteractive();
+        }
 
         // --- Divider ---
         const dividerY = row2Y + 56;
@@ -156,14 +184,24 @@ export class LevelSelect extends Scene implements ChangeableScene {
             align: "center",
         };
 
-        const makeEndingButton = (x: number, label: string, preview: number) => {
+        const makeEndingButton = (
+            x: number,
+            label: string,
+            preview: number,
+        ) => {
             const btn = this.add
                 .text(x, endingY, label, endingStyle)
                 .setOrigin(0.5)
                 .setDepth(10)
                 .setInteractive({ useHandCursor: true })
-                .on("pointerover", () => { btn.setStyle({ backgroundColor: "#7a6848" }); btn.setScale(1.05); })
-                .on("pointerout",  () => { btn.setStyle({ backgroundColor: "#5a4a32" }); btn.setScale(1); })
+                .on("pointerover", () => {
+                    btn.setStyle({ backgroundColor: "#7a6848" });
+                    btn.setScale(1.05);
+                })
+                .on("pointerout", () => {
+                    btn.setStyle({ backgroundColor: "#5a4a32" });
+                    btn.setScale(1);
+                })
                 .on("pointerdown", () => {
                     playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                     stopSound(this, SOUND_KEYS.menuTheme);
@@ -174,9 +212,15 @@ export class LevelSelect extends Scene implements ChangeableScene {
             return btn;
         };
 
-        makeEndingButton(312, "Ending 1", 1);
-        makeEndingButton(512, "Ending 2", 2);
-        makeEndingButton(712, "Ending 3", 3);
+        const endingButton: Phaser.GameObjects.Text[] = [];
+
+        endingButton.push(makeEndingButton(312, "Ending 1", 1));
+        endingButton.push(makeEndingButton(512, "Ending 2", 2));
+        endingButton.push(makeEndingButton(712, "Ending 3", 3));
+
+        for (let i = 0; i < endingButton.length; i++) {
+            endingButton[i].setAlpha(0.35).disableInteractive();
+        }
 
         // --- Main Menu button ---
         const btnY = cardY + cardH / 2 - 46;
@@ -194,8 +238,14 @@ export class LevelSelect extends Scene implements ChangeableScene {
             .setOrigin(0.5)
             .setDepth(10)
             .setInteractive({ useHandCursor: true })
-            .on("pointerover", () => { mainMenuButton.setStyle({ backgroundColor: "#4e7a56" }); mainMenuButton.setScale(1.05); })
-            .on("pointerout",  () => { mainMenuButton.setStyle({ backgroundColor: "#3a5c42" }); mainMenuButton.setScale(1); })
+            .on("pointerover", () => {
+                mainMenuButton.setStyle({ backgroundColor: "#4e7a56" });
+                mainMenuButton.setScale(1.05);
+            })
+            .on("pointerout", () => {
+                mainMenuButton.setStyle({ backgroundColor: "#3a5c42" });
+                mainMenuButton.setScale(1);
+            })
             .on("pointerdown", () => {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 this.scene.start("MainMenu");
