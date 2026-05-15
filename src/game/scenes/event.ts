@@ -196,10 +196,10 @@ export class EventScene extends Scene {
     private showTutorialCompletePopup() {
         this.showPopup(
             "Example Round Complete",
-            "The example round is over.\n\nReturn to the main menu when you're ready.",
-            "Main Menu",
+            "The example round is over.\n\nBegin day 1 when you're ready.",
+            "Continue",
             () => {
-                this.scene.start("MainMenu");
+                this.scene.start("Level1", { tutorialMode: false });
             },
             260,
         );
