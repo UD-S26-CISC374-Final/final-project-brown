@@ -1,3 +1,4 @@
+import { markDayCompleted } from "../progress.ts";
 import { Scene } from "phaser";
 import { playOneShot, SOUND_KEYS } from "../audio";
 import { MAX_DAYS } from "../email-content";
@@ -90,9 +91,9 @@ export class Shop extends Scene {
             .text(
                 512,
                 148,
-                this.tutorialMode ?
-                    "Shop Walkthrough"
-                :   `Supply Window - Day ${this.day}`,
+                this.tutorialMode ? "Shop Walkthrough" : (
+                    `Supply Window - Day ${this.day}`
+                ),
                 {
                     fontFamily: "Dotemp-8bit",
                     fontSize: "40px",
@@ -421,6 +422,7 @@ export class Shop extends Scene {
     private leaveShop() {
         if (this.tutorialMode) {
             localStorage.setItem("tutorialCompleted", "true");
+            markDayCompleted(this.day);
             this.startSceneAfterFade("EventScene", {
                 day: 1,
                 totalPoints: 0,
