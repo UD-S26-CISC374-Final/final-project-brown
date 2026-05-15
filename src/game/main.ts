@@ -1,6 +1,7 @@
 import { Boot } from "./scenes/boot";
 import { Ending } from "./scenes/ending";
 import { EventScene } from "./scenes/event";
+import { IntroBriefing } from "./scenes/intro-briefing";
 import { Level1 as MainGame } from "./scenes/level1";
 import { MainMenu } from "./scenes/main-menu";
 import { CANVAS, Game } from "phaser";
@@ -22,6 +23,7 @@ const config: Phaser.Types.Core.GameConfig = {
         Preloader,
         MainMenu,
         Tutorial,
+        IntroBriefing,
         MainGame,
         Shop,
         EventScene,

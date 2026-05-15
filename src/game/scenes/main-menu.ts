@@ -241,9 +241,7 @@ export class MainMenu extends Scene implements ChangeableScene {
                 playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
                 stopSound(this, SOUND_KEYS.menuTheme);
                 clearSavedRun();
-                // Start Shift goes straight into the example round.
-                // Tutorial slides are only shown via the Tutorial button.
-                this.startSceneAfterFade("Level1", { tutorialMode: true });
+                this.startSceneAfterFade("IntroBriefing");
             });
 
         const continueButton = this.add
