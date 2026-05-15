@@ -119,7 +119,7 @@ export class MainMenu extends Scene implements ChangeableScene {
         const bodyTopY = headerY + headerH / 2 + 16;
 
         this.add
-            .text(cardX, bodyTopY + 25, " SECURITY MAILROOM  —  NIGHT SHIFT ", {
+            .text(cardX, bodyTopY + 25, " SECURITY MAILROOM  -  NIGHT SHIFT ", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "18px",
                 color: "#f2e8d0",
@@ -132,7 +132,7 @@ export class MainMenu extends Scene implements ChangeableScene {
 
         // Blinking night badge
         this.add
-            .text(cardX + 238, bodyTopY + 20, "●", {
+            .text(cardX + 238, bodyTopY + 20, "*", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "16px",
                 color: "#c05030",
@@ -173,21 +173,24 @@ export class MainMenu extends Scene implements ChangeableScene {
             .setDepth(10);
 
         // --- Buttons ---
-        const btnY = cardY + cardH / 2 - 54;
+        const topButtonY = cardY + cardH / 2 - 88;
+        const bottomButtonY = cardY + cardH / 2 - 30;
 
         const savedRun = loadSavedRun();
         const hasSavedRun = savedRun !== null;
-        const tutorialX = cardX - 262;
-        const startX = cardX - 96;
-        const continueX = cardX + 76;
-        const levelSelectX = cardX + 250;
-        const tutorialW = 145;
-        const startW = 155;
-        const continueW = 155;
-        const levelSelectW = 165;
+        const tutorialX = cardX - 208;
+        const startX = cardX;
+        const continueX = cardX;
+        const optionsX = cardX - 118;
+        const levelSelectX = cardX + 118;
+        const tutorialW = 170;
+        const startW = 170;
+        const continueW = 170;
+        const optionsW = 170;
+        const levelSelectW = 210;
 
         const tutorialButton = this.add
-            .text(tutorialX, btnY, "Tutorial", {
+            .text(tutorialX, topButtonY, "Tutorial", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: 24,
                 color: "#f0e8d4",
@@ -215,7 +218,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             });
 
         const startButton = this.add
-            .text(startX, btnY, "New Game", {
+            .text(startX, topButtonY, "New Game", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: 24,
                 color: "#2a3a2a",
@@ -245,7 +248,7 @@ export class MainMenu extends Scene implements ChangeableScene {
             });
 
         const continueButton = this.add
-            .text(continueX, btnY, "Continue", {
+            .text(continueX + 208, topButtonY, "Continue", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: 24,
                 color: hasSavedRun ? "#2a3a2a" : "#706b5d",
@@ -285,10 +288,38 @@ export class MainMenu extends Scene implements ChangeableScene {
                 });
         }
 
-        const levelSelectButton = this.add
-            .text(levelSelectX, btnY, "Level Select", {
+        const optionsButton = this.add
+            .text(optionsX, bottomButtonY, "Options", {
                 fontFamily: "Dotemp-8bit",
-                fontSize: 20,
+                fontSize: 23,
+                color: "#f0e8d4",
+                stroke: "#1a2a1a",
+                strokeThickness: 1,
+                backgroundColor: "#3a5c42",
+                fixedWidth: optionsW,
+                padding: { left: 8, right: 8, top: 10, bottom: 10 },
+                align: "center",
+            })
+            .setOrigin(0.5)
+            .setDepth(10)
+            .setInteractive({ useHandCursor: true })
+            .on("pointerover", () => {
+                optionsButton.setStyle({ backgroundColor: "#4e7a56" });
+                optionsButton.setScale(1.05);
+            })
+            .on("pointerout", () => {
+                optionsButton.setStyle({ backgroundColor: "#3a5c42" });
+                optionsButton.setScale(1);
+            })
+            .on("pointerdown", () => {
+                playOneShot(this, SOUND_KEYS.mouseClick, { volume: 0.45 });
+                this.scene.start("Options");
+            });
+
+        const levelSelectButton = this.add
+            .text(levelSelectX, bottomButtonY, "Level Select", {
+                fontFamily: "Dotemp-8bit",
+                fontSize: 19,
                 color: "#f0e8d4",
                 stroke: "#1a2a1a",
                 strokeThickness: 1,

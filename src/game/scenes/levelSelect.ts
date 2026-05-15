@@ -157,7 +157,7 @@ export class LevelSelect extends Scene implements ChangeableScene {
         divGfx.strokePath();
 
         this.add
-            .text(cardX, dividerY, "— View Endings —", {
+            .text(cardX, dividerY, "- View Endings -", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: 20,
                 color: "#7a6040",

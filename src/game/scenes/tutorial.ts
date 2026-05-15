@@ -1,11 +1,6 @@
 import { Scene } from "phaser";
 
-import {
-    ensureLoopingSound,
-    playOneShot,
-    SOUND_KEYS,
-    stopSound,
-} from "../audio";
+import { ensureLoopingSound, playOneShot, SOUND_KEYS } from "../audio";
 
 const W = 1024;
 const H = 768;
@@ -72,7 +67,7 @@ export class Tutorial extends Scene {
             accent: "VISITOR EVENT",
             body:
                 "Every so often a stranger drops by your desk. He doesn't work for Blackline. He never gives his real name.\n\n" +
-                "He talks fast about the last analyst, about names that shouldn't be in the inbox, and about which emails to let through even when the rulebook says otherwise. Listen carefully — his hints point to the lore buried inside the email stream.\n\n" +
+                "He talks fast about the last analyst, about names that shouldn't be in the inbox, and about which emails to let through even when the rulebook says otherwise. Listen carefully - his hints point to the lore buried inside the email stream.\n\n" +
                 "He won't stop you from working, but the choices you make on flagged plot emails decide which ending you get.",
         },
         {
@@ -213,10 +208,10 @@ export class Tutorial extends Scene {
         this.beginButton = this.createButton(
             W / 2,
             710,
-            "Begin Example Round",
+            "Finish Tutorial",
             () => {
-                stopSound(this, SOUND_KEYS.menuTheme);
-                this.startSceneAfterFade("Level1", { tutorialMode: true });
+                localStorage.setItem("tutorialCompleted", "true");
+                this.startSceneAfterFade("MainMenu");
             },
             260,
         );
@@ -287,7 +282,7 @@ export class Tutorial extends Scene {
 
         this.statusText.setText(
             isLast ?
-                "When you're ready, begin the example round to practice a short shift."
+                "When you're ready, return to the main menu and start a new game."
             :   "",
         );
 

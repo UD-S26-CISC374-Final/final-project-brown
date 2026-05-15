@@ -266,7 +266,7 @@ export class Shop extends Scene {
                 "This is the supply window. After every shift, you stop here before the next day.\n\n" +
                     "Food and utilities ($3 each) must be paid every day. Rent ($3) must be paid at least once every other day. Day 1 essentials are covered for free.\n\n" +
                     "Powerups: Hint ($5) gives a clue on the selected email. Shield ($10) blocks one mistake next shift. Eliminate ($15) removes one wrong answer.\n\n" +
-                    "Walkthrough only — no real purchases are needed. Your tutorial money and points will reset before Day 1 begins.",
+                    "Walkthrough only - no real purchases are needed. Your tutorial money and points will reset before Day 1 begins.",
                 {
                     fontFamily: "Dotemp-8bit",
                     fontSize: "16px",

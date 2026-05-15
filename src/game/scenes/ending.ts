@@ -1,5 +1,10 @@
 import { Scene } from "phaser";
-import { playOneShot, SOUND_KEYS, stopSound } from "../audio";
+import {
+    getConfiguredVolume,
+    playOneShot,
+    SOUND_KEYS,
+    stopSound,
+} from "../audio";
 import { markEndingCompleted } from "../progress.ts";
 
 const INTRO_SOUND_MAP: Record<string, string> = {
@@ -213,7 +218,7 @@ export class Ending extends Scene {
                                 ENDING_SOUND_VOLUME[soundKey]
                             :   INTRO_SOUND_VOLUME[soundKey]) ?? 0.25;
                         this.currentSound = this.sound.add(soundKey, {
-                            volume,
+                            volume: getConfiguredVolume(soundKey, volume),
                         });
                         this.currentSound.once("complete", () => {
                             this.currentSound = null;
@@ -246,7 +251,7 @@ export class Ending extends Scene {
         const endingName = endingNames[this.endingType];
 
         const endLabel = this.add
-            .text(512, 220, "— End —", {
+            .text(512, 220, "- End -", {
                 fontFamily: "Dotemp-8bit",
                 fontSize: "28px",
                 color: "#b5a36a",

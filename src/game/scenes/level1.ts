@@ -15,6 +15,7 @@ import {
     MAX_DAYS,
 } from "../email-content";
 import { clearSavedRun, saveRun } from "../save-game";
+import { getGameSettings } from "../settings";
 
 interface LevelSceneData {
     day?: number;
@@ -361,7 +362,10 @@ export class Level1 extends Scene {
     };
 
     private playRandomCaptchaKeyHit() {
-        const soundKey = CAPTCHA_KEY_HIT_SOUND_KEYS[Phaser.Math.Between(0, CAPTCHA_KEY_HIT_SOUND_KEYS.length - 1)];
+        const soundKey =
+            CAPTCHA_KEY_HIT_SOUND_KEYS[
+                Phaser.Math.Between(0, CAPTCHA_KEY_HIT_SOUND_KEYS.length - 1)
+            ];
         playOneShot(this, soundKey, { volume: 0.45 });
     }
 
@@ -1647,7 +1651,7 @@ export class Level1 extends Scene {
             .setDepth(28)
             .setVisible(false);
 
-        // Plot dialogue panel — themed box that replaces the distraction bar
+        // Plot dialogue panel - themed box that replaces the distraction bar
         this.captchaBg = this.add
             .rectangle(512, 384, 1024, 768, 0x090d09, 0.62)
             .setDepth(60)
@@ -2117,8 +2121,12 @@ export class Level1 extends Scene {
                 }
 
                 const f = Phaser.Math.FloatBetween(0, 1);
-                const zombieChance = 0.025 * this.interruptChanceMultiplier;
-                const totalChance = 0.12 * this.interruptChanceMultiplier;
+                const distractionScale =
+                    getGameSettings().reducedDistractions ? 0.45 : 1;
+                const zombieChance =
+                    0.025 * this.interruptChanceMultiplier * distractionScale;
+                const totalChance =
+                    0.12 * this.interruptChanceMultiplier * distractionScale;
                 if (f < zombieChance) {
                     this.interruptChanceMultiplier *= 0.66;
                     this.startInterruptZombie();
@@ -2532,7 +2540,7 @@ export class Level1 extends Scene {
                     playOneShot(this, SOUND_KEYS.wrongBuzzer, { volume: 0.55 });
                     if (this.tutorialMode) {
                         this.setStatusBar(
-                            "Out of time in the example. We'll skip ahead — remember the steps for the real shift.",
+                            "Out of time in the example. We'll skip ahead - remember the steps for the real shift.",
                             "#7a2d25",
                         );
                         this.endInterruptZombie();
@@ -3164,7 +3172,7 @@ export class Level1 extends Scene {
             return "Look closely at whether the sender name matches the email address.";
         }
         if (v.includes("subject and body") || v.includes("subject/body")) {
-            return "Read the subject line and the body — are they about the same thing?";
+            return "Read the subject line and the body - are they about the same thing?";
         }
         if (
             v.includes("does not normally send") ||
@@ -3176,7 +3184,7 @@ export class Level1 extends Scene {
             return "Check whether this person actually works at that company.";
         }
         if (v.includes("blocked")) {
-            return "Review today's rules — there may be a restriction you're missing.";
+            return "Review today's rules - there may be a restriction you're missing.";
         }
         if (v.includes("domain") || v.includes("approved")) {
             return "Look carefully at the domain in the sender's address.";
@@ -3291,7 +3299,12 @@ export class Level1 extends Scene {
             return this.tutorialPhase === "awaiting-captcha";
         }
 
-        return Phaser.Math.FloatBetween(0, 1) < this.captchaAnswerChance;
+        const distractionScale =
+            getGameSettings().reducedDistractions ? 0.45 : 1;
+        return (
+            Phaser.Math.FloatBetween(0, 1) <
+            this.captchaAnswerChance * distractionScale
+        );
     }
 
     private startAnswerCaptchaIfNeeded(email: EmailCase) {
@@ -3567,17 +3580,8 @@ export class Level1 extends Scene {
 
         if (this.tutorialMode) {
             this.tutorialPhase = "done";
-            this.startSceneAfterFade("Shop", {
-                day: 1,
-                money: this.money,
-                totalPoints: this.totalPoints,
-                daysWithoutRent: 0,
-                hintCount: this.hintCount,
-                revealCount: this.revealCount,
-                plotEmailsAccepted: 0,
-                plotEmailsRejected: 0,
-                tutorialMode: true,
-            });
+            localStorage.setItem("tutorialCompleted", "true");
+            this.startSceneAfterFade("MainMenu");
             return;
         }
 

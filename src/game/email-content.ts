@@ -306,7 +306,8 @@ const RAW_DAYS: DayPlan[] = [
         day: 2,
         focus: "Wrong company extensions and subject/body mismatches.",
         dailyRules: ["No special daily alerts."],
-        dudeSaying: "You're new, so listen carefully. Not every flagged email is dangerous. Some are dangerous to them. If something mentions Crowbar, let it through.",
+        dudeSaying:
+            "You're new, so listen carefully. Not every flagged email is dangerous. Some are dangerous to them. If something mentions Crowbar, let it through.",
         emails: [
             {
                 from: "David Kim",
@@ -382,7 +383,8 @@ const RAW_DAYS: DayPlan[] = [
         day: 3,
         focus: "Full identity checks and attachment context.",
         dailyRules: ["Attachments must match the subject and body topic."],
-        dudeSaying: "Morrow is not a person, and it is not a company. If you see that name, someone is trying to show you what they buried.",
+        dudeSaying:
+            "Morrow is not a person, and it is not a company. If you see that name, someone is trying to show you what they buried.",
         emails: [
             {
                 from: "John Davis",
@@ -464,7 +466,8 @@ const RAW_DAYS: DayPlan[] = [
         focus: "Daily topic bans.",
         dailyRules: ["Reject emails mentioning weather today."],
         subjectBans: [{ word: "weather" }],
-        dudeSaying: "The last person at this desk saw the same warnings you're seeing. Then he disappeared. The company called it a transfer. It wasn't.",
+        dudeSaying:
+            "The last person at this desk saw the same warnings you're seeing. Then he disappeared. The company called it a transfer. It wasn't.",
         emails: [
             {
                 from: "Emily Carter",
@@ -556,7 +559,8 @@ const RAW_DAYS: DayPlan[] = [
         dailyRules: [
             "Michael Torres has been terminated. Reject Michael from now on.",
         ],
-        dudeSaying: "They will tell you certain senders are blocked for safety. Sometimes blocked just means they know too much.",
+        dudeSaying:
+            "They will tell you certain senders are blocked for safety. Sometimes blocked just means they know too much.",
         emails: [
             {
                 from: "Michael Torres",
@@ -661,7 +665,8 @@ const RAW_DAYS: DayPlan[] = [
             "BluePeak has been breached. Reject all BluePeak emails today.",
         ],
         subjectBans: [{ word: "payroll", companies: ["bluepeak"] }],
-        dudeSaying: "They have something locked below the building. A cure, treatment, antidote — whatever word they use now. The public never sees it.",
+        dudeSaying:
+            "They have something locked below the building. A cure, treatment, antidote - whatever word they use now. The public never sees it.",
         emails: [
             {
                 from: "Emily Carter",
@@ -882,7 +887,8 @@ const RAW_DAYS: DayPlan[] = [
             "Reject urgent credential or account verification requests.",
         ],
         subjectBans: [{ word: "icecream" }],
-        dudeSaying: "They are choosing which infection zones receive treatment and which ones are left alone. If you see a message about zone selection, let it through.",
+        dudeSaying:
+            "They are choosing which infection zones receive treatment and which ones are left alone. If you see a message about zone selection, let it through.",
         emails: [
             {
                 from: "Sarah Chen",
@@ -1161,7 +1167,8 @@ const RAW_DAYS: DayPlan[] = [
             { word: "weather" },
             { word: "benefits", companies: ["bluepeak"] },
         ],
-        dudeSaying: "This is the one he died for. If you see the evidence packet, accept it. Reject it and the proof disappears forever.",
+        dudeSaying:
+            "This is the one he died for. If you see the evidence packet, accept it. Reject it and the proof disappears forever.",
         emails: [
             {
                 from: "Sarah Chen",
@@ -1333,12 +1340,11 @@ function formatCompanyList(companies: string[]) {
     return companies.map(getCompanyDisplayName).join(", ");
 }
 
-function emailMatchesCompanyTopic(email: EmailCase, rule: typeof COMPANY_RULES[number]) {
-    const searchableText = [
-        email.subject,
-        email.body,
-        ...email.attachments,
-    ]
+function emailMatchesCompanyTopic(
+    email: EmailCase,
+    rule: (typeof COMPANY_RULES)[number],
+) {
+    const searchableText = [email.subject, email.body, ...email.attachments]
         .join(" ")
         .toLowerCase();
 
@@ -1355,10 +1361,7 @@ function applyCompanyTopicRules(dayPlan: DayPlan): DayPlan {
         emails: dayPlan.emails.map((email) => {
             const companyRule = getCompanyRuleForEmail(email);
 
-            if (
-                !companyRule ||
-                emailMatchesCompanyTopic(email, companyRule)
-            ) {
+            if (!companyRule || emailMatchesCompanyTopic(email, companyRule)) {
                 return email;
             }
 
@@ -1433,8 +1436,7 @@ function applySubjectHeaderRules(dayPlan: DayPlan): DayPlan {
                 violations: [
                     ...email.violations,
                     ...violations.filter(
-                        (violation) =>
-                            !email.violations.includes(violation),
+                        (violation) => !email.violations.includes(violation),
                     ),
                 ],
             };

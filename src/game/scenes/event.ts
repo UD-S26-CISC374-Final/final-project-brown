@@ -80,19 +80,14 @@ export class EventScene extends Scene {
             })
             .setOrigin(0.5);
 
-        this.createButton(
-            512,
-            520,
-            "Continue",
-            () => {
-                if (this.tutorialMode) {
-                    this.showTutorialCompletePopup();
-                    return;
-                }
+        this.createButton(512, 520, "Continue", () => {
+            if (this.tutorialMode) {
+                this.showTutorialCompletePopup();
+                return;
+            }
 
-                this.startLevelAfterFade();
-            },
-        );
+            this.startLevelAfterFade();
+        });
 
         if (this.tutorialMode) {
             this.showTutorialEventIntroPopup();
@@ -201,22 +196,10 @@ export class EventScene extends Scene {
     private showTutorialCompletePopup() {
         this.showPopup(
             "Example Round Complete",
-            "The example round is over.\n\nDay 1 is about to begin.",
-            "Begin Day 1",
+            "The example round is over.\n\nReturn to the main menu when you're ready.",
+            "Main Menu",
             () => {
-                this.startLevelAfterFade({
-                    day: 1,
-                    totalPoints: 0,
-                    money: 0,
-                    daysWithoutRent: 0,
-                    hintCount: 0,
-                    revealCount: 0,
-                    shieldActive: false,
-                    shopOutcome: "continue",
-                    outcomeMessage: "",
-                    plotEmailsAccepted: 0,
-                    plotEmailsRejected: 0,
-                });
+                this.scene.start("MainMenu");
             },
             260,
         );
