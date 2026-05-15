@@ -1,3 +1,4 @@
+import { markDayCompleted } from "../progress.ts";
 import { Scene } from "phaser";
 import { playOneShot, SOUND_KEYS } from "../audio";
 import { MAX_DAYS } from "../email-content";
@@ -421,6 +422,7 @@ export class Shop extends Scene {
     private leaveShop() {
         if (this.tutorialMode) {
             localStorage.setItem("tutorialCompleted", "true");
+            markDayCompleted(this.day);
             this.startSceneAfterFade("EventScene", {
                 day: 1,
                 totalPoints: 0,

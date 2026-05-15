@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import { playOneShot, SOUND_KEYS, stopSound } from "../audio";
+import { markEndingCompleted } from "../progress.ts";
 
 const INTRO_SOUND_MAP: Record<string, string> = {
     "A car arrives outside your house.": SOUND_KEYS.carStop,
@@ -91,6 +92,7 @@ export class Ending extends Scene {
 
     init(data: EndingSceneData) {
         this.endingType = data.endingType;
+        markEndingCompleted(data.endingType);
     }
 
     create() {
@@ -170,9 +172,10 @@ export class Ending extends Scene {
         const text = this.screens[index] ?? "";
         const isFirst = index === 0;
         const isLast = index === this.screens.length - 1;
-        const soundKey = isLast
-            ? ENDING_SOUND_KEYS[this.endingType]
-            : (INTRO_SOUND_MAP[text] ?? null);
+        const soundKey =
+            isLast ?
+                ENDING_SOUND_KEYS[this.endingType]
+            :   (INTRO_SOUND_MAP[text] ?? null);
 
         this.messageText
             .setY(isLast ? 460 : 340)
@@ -206,17 +209,23 @@ export class Ending extends Scene {
                 onComplete: () => {
                     if (soundKey) {
                         const volume =
-                            (isLast
-                                ? ENDING_SOUND_VOLUME[soundKey]
-                                : INTRO_SOUND_VOLUME[soundKey]) ?? 0.25;
-                        this.currentSound = this.sound.add(soundKey, { volume });
+                            (isLast ?
+                                ENDING_SOUND_VOLUME[soundKey]
+                            :   INTRO_SOUND_VOLUME[soundKey]) ?? 0.25;
+                        this.currentSound = this.sound.add(soundKey, {
+                            volume,
+                        });
                         this.currentSound.once("complete", () => {
                             this.currentSound = null;
-                            this.continueBtn.setInteractive({ useHandCursor: true });
+                            this.continueBtn.setInteractive({
+                                useHandCursor: true,
+                            });
                         });
                         this.currentSound.play();
                     } else {
-                        this.continueBtn.setInteractive({ useHandCursor: true });
+                        this.continueBtn.setInteractive({
+                            useHandCursor: true,
+                        });
                     }
                 },
             });

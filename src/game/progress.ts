@@ -8,8 +8,10 @@ interface Progress {
 function load(): Progress {
     try {
         const raw = localStorage.getItem(KEY);
-        if (raw) return JSON.parse(raw);
-    } catch {}
+        if (raw) return JSON.parse(raw) as Progress;
+    } catch {
+        return { completedDays: [], completedEndings: [] };
+    }
     return { completedDays: [], completedEndings: [] };
 }
 

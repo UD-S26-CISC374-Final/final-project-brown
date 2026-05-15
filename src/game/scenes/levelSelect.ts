@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from "phaser";
-
+import { getCompletedDays } from "../progress.ts";
+import { getCompletedEndings } from "../progress.ts";
 import {
     ensureLoopingSound,
     playOneShot,
@@ -147,10 +148,6 @@ export class LevelSelect extends Scene implements ChangeableScene {
             dayButtons.push(makeDayButton(x, row2Y, `Day ${i + 6}`, i + 6)),
         );
 
-        for (let i = 1; i < dayButtons.length; i++) {
-            dayButtons[i].setAlpha(0.35).disableInteractive();
-        }
-
         // --- Divider ---
         const dividerY = row2Y + 56;
         const divGfx = this.add.graphics().setDepth(5);
@@ -218,8 +215,22 @@ export class LevelSelect extends Scene implements ChangeableScene {
         endingButton.push(makeEndingButton(512, "Ending 2", 2));
         endingButton.push(makeEndingButton(712, "Ending 3", 3));
 
+        const completedDays = getCompletedDays();
+
+        for (let i = 1; i < dayButtons.length; i++) {
+            const day = i + 1;
+            if (!completedDays.includes(day - 1)) {
+                dayButtons[i].setAlpha(0.35).disableInteractive();
+            }
+        }
+
+        const completedEndings = getCompletedEndings();
+
         for (let i = 0; i < endingButton.length; i++) {
-            endingButton[i].setAlpha(0.35).disableInteractive();
+            const ending = i + 1;
+            if (!completedEndings.includes(ending)) {
+                endingButton[i].setAlpha(0.35).disableInteractive();
+            }
         }
 
         // --- Main Menu button ---
