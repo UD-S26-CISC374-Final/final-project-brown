@@ -20,7 +20,7 @@ function storageAvailable() {
     return typeof localStorage !== "undefined";
 }
 
-function clampVolume(value: unknown, fallback: number) {
+function clampVolume(value: number | undefined, fallback: number) {
     return typeof value === "number" && Number.isFinite(value) ?
             Phaser.Math.Clamp(value, 0, 1)
         :   fallback;
