@@ -117,7 +117,7 @@ const TUTORIAL_POPUPS: Record<
     zombie: {
         title: "Distraction Event: The Zombie",
         body:
-            "A zombie is about to break through the door. You will have 20 seconds.\n\n" +
+            "A zombie is about to break through the door. You will have 60 seconds.\n\n" +
             "1. Note today's password at the top of the screen.\n" +
             "2. Click the gun cabinet to open the keypad.\n" +
             "3. Enter the 4-digit password and press Enter.\n" +
@@ -2516,7 +2516,7 @@ export class Level1 extends Scene {
             this.buttonBackspace.setVisible(true);
         });
 
-        let timeRemaining = 20;
+        let timeRemaining = this.tutorialMode ? 60 : 20;
         this.zombieTimerText = this.add
             .text(592, 30, `Time: ${timeRemaining}s`, {
                 fontFamily: "Dotemp-8bit",
@@ -3580,8 +3580,18 @@ export class Level1 extends Scene {
 
         if (this.tutorialMode) {
             this.tutorialPhase = "done";
-            localStorage.setItem("tutorialCompleted", "true");
-            this.startSceneAfterFade("MainMenu");
+            this.startSceneAfterFade("Shop", {
+                day: this.day,
+                totalPoints: this.totalPoints,
+                money: this.money,
+                daysWithoutRent: this.daysWithoutRent,
+                hintCount: this.hintCount,
+                revealCount: this.revealCount,
+                plotEmailsAccepted: this.plotEmailsAccepted,
+                plotEmailsRejected: this.plotEmailsRejected,
+                shieldActive: this.shieldActive,
+                tutorialMode: true,
+            });
             return;
         }
 
